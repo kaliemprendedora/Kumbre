@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import Link from 'next/link'
 import { Target, TrendingUp, AlertCircle, CheckCircle } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
@@ -30,10 +31,12 @@ export default function ObjetivosPage() {
             <p className="text-lg font-bold text-foreground">{formatCurrency(goals.totalMonthlyRequired, 'CLP')}</p>
           </div>
         </div>
-        <Button variant="primary" size="sm">
-          <Target className="h-3.5 w-3.5" />
-          Nuevo objetivo
-        </Button>
+        <Link href="/perfil/objetivos">
+          <Button variant="primary" size="sm">
+            <Target className="h-3.5 w-3.5" />
+            Nuevo objetivo
+          </Button>
+        </Link>
       </div>
 
       {/* Feasibility alert */}
