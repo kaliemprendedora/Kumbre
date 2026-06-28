@@ -12,9 +12,11 @@ import {
   Settings,
   ChevronDown,
   Mountain,
+  UserCircle,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { mockUniverses, mockUser } from '@/data/mock'
+import { mockUniverses } from '@/data/mock'
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 import type { NavItem } from '@/types'
 
 const navItems: NavItem[] = [
@@ -23,7 +25,7 @@ const navItems: NavItem[] = [
   { label: 'Objetivos', href: '/objetivos', icon: 'Target' },
   { label: 'Simulador', href: '/simulador', icon: 'TrendingUp' },
   { label: 'Patrimonio', href: '/patrimonio', icon: 'BarChart3' },
-  { label: 'Empresa', href: '/empresa', icon: 'Briefcase' },
+  { label: 'Mi Perfil', href: '/perfil', icon: 'UserCircle' },
 ]
 
 const iconMap = {
@@ -34,11 +36,12 @@ const iconMap = {
   BarChart3,
   Briefcase,
   Settings,
+  UserCircle,
 }
 
 export function Sidebar() {
   const pathname = usePathname()
-  const activeUniverse = mockUniverses.find((u) => u.id === mockUser.preferences.activeUniverseId)
+  const activeUniverse = mockUniverses[0]
 
   return (
     <aside className="flex h-full w-[var(--sidebar-width)] flex-col border-r border-border bg-surface shrink-0">
@@ -105,15 +108,14 @@ export function Sidebar() {
           Configuración
         </Link>
 
-        <div className="mt-2 flex items-center gap-2.5 rounded-[var(--radius-md)] px-3 py-2">
+        <Link href="/perfil" className="mt-2 flex items-center gap-2.5 rounded-[var(--radius-md)] px-3 py-2 hover:bg-border-subtle transition-colors">
           <div className="flex h-7 w-7 items-center justify-center rounded-full bg-brand-100 text-brand-700 text-xs font-semibold shrink-0">
-            {mockUser.name[0]}
+            K
           </div>
           <div className="flex flex-col min-w-0">
-            <span className="text-xs font-medium text-foreground truncate">{mockUser.name}</span>
-            <span className="text-[10px] text-foreground-muted truncate">{mockUser.email}</span>
+            <span className="text-xs font-medium text-foreground truncate">Mi cuenta</span>
           </div>
-        </div>
+        </Link>
       </div>
     </aside>
   )

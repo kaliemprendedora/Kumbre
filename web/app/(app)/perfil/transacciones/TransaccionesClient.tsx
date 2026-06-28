@@ -1,0 +1,135 @@
+'use client'
+
+import { useState } from 'react'
+import { useRouter } from 'next/navigation'
+import { Plus, Trash2 } from 'lucide-react'
+import { createClient } from '@/lib/supabase/client'
+import { Button } from '@/components/ui/Button'
+import { Card, CardContent } from '@/components/ui/Card'
+import { formatCLP } from '@/lib/format'
+
+type Tx = { id: string; description: string; amount: number; kind: string; is_recurring: boolean; account_id: string }
+type Cuenta = { id: string; name: string }
+
+export function TransaccionesClient({ initial, cuentas }: { initial: Tx[]; cuentas: Cuenta[] }) {
+  const router = useRouter()
+  const [txs, setTxs] = useState(initial)
+  const [showing, setShowing] = useState(false)
+  const [form, setForm] = useState({ description: '', amount: '', kind: 'income', is_recurring: true, account_id: cuentas[0]?.id ?? '' })
+  const [loading, setLoading] = useState(false)
+
+  async function handleAdd(e: React.FormEvent) {
+    e.preventDefault()
+    if (!form.account_id) return
+    setLoading(true)
+    const supabase = createClient()
+    const { data } = await supabase.from('transactions').insert({
+      description: form.description,
+      amount: Math.round(Number(form.amount.replace(/\D/g, ''))),
+      kind: form.kind,
+      is_recurring: form.is_recurring,
+      account_id: form.account_id,
+      date: new Date().toISOString().split('T')[0],
+    }).select().single()
+    if (data) { setTxs(p => [...p, data]); setShowing(false) }
+    setLoading(false)
+    router.refresh()
+  }
+
+  async function handleDelete(id: string) {
+    const supabase = createClient()
+    await supabase.from('transactions').delete().eq('id', id)
+    setTxs(p => p.filter(t => t.id !== id))
+    router.refresh()
+  }
+
+  const ingresos = txs.filter(t => t.kind === 'income')
+  const gastos = txs.filter(t => t.kind === 'expense')
+
+  return (
+    <div className="flex flex-col gap-6 animate-slide-up max-w-2xl">
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-lg font-semibold text-foreground">Ingresos y Gastos</h2>
+          <p className="text-sm text-foreground-muted">Tus entradas y salidas de dinero mensuales</p>
+        </div>
+        <Button size="sm" onClick={() => setShowing(true)} disabled={cuentas.length === 0}>
+          <Plus className="h-4 w-4 mr-1" />Agregar
+        </Button>
+      </div>
+
+      {cuentas.length === 0 && (
+        <Card><CardContent className="p-5 text-sm text-foreground-muted">Primero debes agregar al menos una cuenta en <strong>Cuentas</strong>.</CardContent></Card>
+      )}
+
+      {showing && (
+        <Card>
+          <CardContent className="p-5">
+            <form onSubmit={handleAdd} className="flex flex-col gap-4">
+              <h3 className="text-sm font-semibold">Nuevo ingreso o gasto</h3>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="flex flex-col gap-1.5 col-span-2">
+                  <label className="text-xs font-medium text-foreground-muted">Descripción</label>
+                  <input value={form.description} onChange={e => setForm(p => ({ ...p, description: e.target.value }))} required placeholder="Ej: Sueldo, Arriendo" className="input" />
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-xs font-medium text-foreground-muted">Monto ($)</label>
+                  <input value={form.amount} onChange={e => setForm(p => ({ ...p, amount: e.target.value }))} required placeholder="Ej: 1500000" className="input" />
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-xs font-medium text-foreground-muted">Tipo</label>
+                  <select value={form.kind} onChange={e => setForm(p => ({ ...p, kind: e.target.value }))} className="input">
+                    <option value="income">Ingreso</option>
+                    <option value="expense">Gasto</option>
+                  </select>
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-xs font-medium text-foreground-muted">Cuenta</label>
+                  <select value={form.account_id} onChange={e => setForm(p => ({ ...p, account_id: e.target.value }))} className="input">
+                    {cuentas.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                  </select>
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-xs font-medium text-foreground-muted">¿Es mensual?</label>
+                  <select value={form.is_recurring ? 'si' : 'no'} onChange={e => setForm(p => ({ ...p, is_recurring: e.target.value === 'si' }))} className="input">
+                    <option value="si">Sí (mensual)</option>
+                    <option value="no">No (único)</option>
+                  </select>
+                </div>
+              </div>
+              <div className="flex gap-2 justify-end">
+                <Button type="button" variant="ghost" size="sm" onClick={() => setShowing(false)}>Cancelar</Button>
+                <Button type="submit" size="sm" disabled={loading}>{loading ? 'Guardando...' : 'Guardar'}</Button>
+              </div>
+            </form>
+          </CardContent>
+        </Card>
+      )}
+
+      {[{ label: 'Ingresos', items: ingresos, color: 'text-green-600' }, { label: 'Gastos', items: gastos, color: 'text-red-500' }].map(({ label, items, color }) => (
+        <div key={label}>
+          <p className="text-xs font-semibold text-foreground-muted uppercase tracking-wide mb-2">{label}</p>
+          {items.length === 0
+            ? <Card><CardContent className="p-4 text-sm text-foreground-muted">Sin {label.toLowerCase()} registrados.</CardContent></Card>
+            : items.map(t => (
+              <Card key={t.id} className="mb-2">
+                <CardContent className="flex items-center justify-between p-4">
+                  <div>
+                    <p className="text-sm font-medium text-foreground">{t.description}</p>
+                    <p className="text-xs text-foreground-muted">{t.is_recurring ? 'Mensual' : 'Único'}</p>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <p className={`text-sm font-semibold ${color}`}>{formatCLP(t.amount)}</p>
+                    <button onClick={() => handleDelete(t.id)} className="text-foreground-subtle hover:text-red-500 transition-colors">
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </div>
+                </CardContent>
+              </Card>
+            ))
+          }
+        </div>
+      ))}
+    </div>
+  )
+}
