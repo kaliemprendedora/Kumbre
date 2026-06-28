@@ -19,9 +19,9 @@ export default async function DashboardPage() {
   const { cashflow, netWorth, debt, goals, capacity, rules, snapshot } = await getAnalysisForUser()
   const isDemo = snapshot.accounts.every(a => a.id.startsWith('acc-'))
 
-  const recentTx = [...(snapshot.transactions.length ? snapshot.transactions : mockTransactions)]
-    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-    .slice(0, 5)
+  const recentTx = isDemo
+    ? [...mockTransactions].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).slice(0, 5)
+    : []
 
   const chartData = [
     { month: '2026-01-01', income: 3_500_000, expenses: 2_300_000, savings: 1_200_000 },
