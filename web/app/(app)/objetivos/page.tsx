@@ -6,12 +6,12 @@ import { Badge } from '@/components/ui/Badge'
 import { Progress } from '@/components/ui/Progress'
 import { Button } from '@/components/ui/Button'
 import { formatCurrency, formatPercent } from '@/lib/utils'
-import { getAnalysis } from '@/lib/kumbre'
+import { getAnalysisForUser } from '@/lib/kumbre'
 
 export const metadata: Metadata = { title: 'Objetivos' }
 
-export default function ObjetivosPage() {
-  const { goals, cashflow } = getAnalysis()
+export default async function ObjetivosPage() {
+  const { goals, cashflow } = await getAnalysisForUser()
 
   return (
     <div className="flex flex-col gap-6 animate-slide-up">

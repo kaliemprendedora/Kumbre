@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
-import { Wallet, TrendingUp, TrendingDown, ShieldCheck, AlertTriangle } from 'lucide-react'
+import Link from 'next/link'
+import { Wallet, TrendingUp, TrendingDown, ShieldCheck, AlertTriangle, Info } from 'lucide-react'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
 import { StatCard } from '@/components/dashboard/StatCard'
@@ -9,15 +10,16 @@ import { UpcomingEvents } from '@/components/dashboard/UpcomingEvents'
 import { GoalCard } from '@/components/dashboard/GoalCard'
 import { HealthScoreRing } from '@/components/dashboard/HealthScoreRing'
 import { mockCategories, mockTransactions, mockAccounts, mockUpcomingEvents } from '@/data/mock'
-import { getAnalysis } from '@/lib/kumbre'
+import { getAnalysisForUser } from '@/lib/kumbre'
 import { formatCurrency, formatPercent } from '@/lib/utils'
 
 export const metadata: Metadata = { title: 'Inicio' }
 
-export default function DashboardPage() {
-  const { cashflow, netWorth, debt, goals, capacity, rules } = getAnalysis()
+export default async function DashboardPage() {
+  const { cashflow, netWorth, debt, goals, capacity, rules, snapshot } = await getAnalysisForUser()
+  const isDemo = snapshot.accounts.every(a => a.id.startsWith('acc-'))
 
-  const recentTx = [...mockTransactions]
+  const recentTx = [...(snapshot.transactions.length ? snapshot.transactions : mockTransactions)]
     .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
     .slice(0, 5)
 
@@ -34,6 +36,21 @@ export default function DashboardPage() {
 
   return (
     <div className="flex flex-col gap-6 animate-slide-up">
+      {/* Demo mode banner */}
+      {isDemo && (
+        <div className="flex items-center gap-3 rounded-[var(--radius-lg)] bg-brand-50 border border-brand-200 p-4">
+          <Info className="h-4 w-4 text-brand-600 shrink-0" />
+          <div className="flex-1">
+            <p className="text-sm font-semibold text-brand-700">Estás viendo datos de demostración</p>
+            <p className="text-xs text-brand-600 mt-0.5">
+              Ingresa tu información real en{' '}
+              <Link href="/perfil" className="underline font-medium">Mi Perfil</Link>
+              {' '}para ver tu situación financiera real.
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* Net worth banner */}
       <div className="rounded-[var(--radius-xl)] bg-gradient-to-br from-brand-600 to-brand-800 p-6 text-white shadow-[var(--shadow-lg)]">
         <div className="flex items-start justify-between">

@@ -4,12 +4,12 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
 import { Progress } from '@/components/ui/Progress'
 import { formatCurrency, formatPercent } from '@/lib/utils'
-import { getAnalysis } from '@/lib/kumbre'
+import { getAnalysisForUser } from '@/lib/kumbre'
 
 export const metadata: Metadata = { title: 'Patrimonio' }
 
-export default function PatrimonioPage() {
-  const { netWorth, debt } = getAnalysis()
+export default async function PatrimonioPage() {
+  const { netWorth, debt, cashflow } = await getAnalysisForUser()
 
   const debtToAsset = Math.round(netWorth.debtToAssetRatio * 100)
 
@@ -166,7 +166,7 @@ export default function PatrimonioPage() {
           </div>
           <div className="grid grid-cols-3 gap-4 text-center">
             {[1, 3, 6].map((months) => {
-              const monthlyExpense = 1_175_000
+              const monthlyExpense = cashflow.expenses || 1_175_000
               const needed = monthlyExpense * months
               const covered = netWorth.liquidAssets >= needed
               return (
