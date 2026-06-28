@@ -36,17 +36,26 @@ export default async function DashboardPage() {
 
   return (
     <div className="flex flex-col gap-6 animate-slide-up">
-      {/* Demo mode banner */}
+      {/* Onboarding checklist for new users */}
       {isDemo && (
-        <div className="flex items-center gap-3 rounded-[var(--radius-lg)] bg-brand-50 border border-brand-200 p-4">
-          <Info className="h-4 w-4 text-brand-600 shrink-0" />
-          <div className="flex-1">
-            <p className="text-sm font-semibold text-brand-700">Estás viendo datos de demostración</p>
-            <p className="text-xs text-brand-600 mt-0.5">
-              Ingresa tu información real en{' '}
-              <Link href="/perfil" className="underline font-medium">Mi Perfil</Link>
-              {' '}para ver tu situación financiera real.
-            </p>
+        <div className="rounded-[var(--radius-xl)] border border-brand-200 bg-brand-50 p-5">
+          <div className="flex items-center gap-2 mb-3">
+            <Info className="h-4 w-4 text-brand-600" />
+            <p className="text-sm font-semibold text-brand-700">Completa tu perfil para ver tu situación real</p>
+          </div>
+          <p className="text-xs text-brand-600 mb-4">Ahora mismo estás viendo datos de ejemplo. Sigue estos pasos para personalizar la app:</p>
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+            {[
+              { href: '/perfil/cuentas', label: '1. Tus cuentas', desc: 'Banco, ahorro, inversiones' },
+              { href: '/perfil/transacciones', label: '2. Ingresos y gastos', desc: 'Sueldo, arriendo, servicios' },
+              { href: '/perfil/deudas', label: '3. Deudas', desc: 'Créditos, hipoteca, tarjetas' },
+              { href: '/perfil/objetivos', label: '4. Objetivos', desc: 'Casa, viaje, emergencia' },
+            ].map(step => (
+              <Link key={step.href} href={step.href} className="flex flex-col gap-1 rounded-[var(--radius-lg)] bg-white border border-brand-100 p-3 hover:border-brand-300 hover:shadow-sm transition-all">
+                <span className="text-xs font-semibold text-brand-700">{step.label}</span>
+                <span className="text-[11px] text-brand-500">{step.desc}</span>
+              </Link>
+            ))}
           </div>
         </div>
       )}

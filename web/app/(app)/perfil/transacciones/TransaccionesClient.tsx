@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Plus, Trash2 } from 'lucide-react'
+import { Plus, Trash2, Pencil, Check, X } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/Button'
 import { Card, CardContent } from '@/components/ui/Card'
@@ -17,6 +17,22 @@ export function TransaccionesClient({ initial, cuentas }: { initial: Tx[]; cuent
   const [showing, setShowing] = useState(false)
   const [form, setForm] = useState({ description: '', amount: '', kind: 'income', is_recurring: true, account_id: cuentas[0]?.id ?? '' })
   const [loading, setLoading] = useState(false)
+  const [editing, setEditing] = useState<string | null>(null)
+  const [editForm, setEditForm] = useState<Partial<Tx>>({})
+
+  async function handleEdit(id: string) {
+    const supabase = createClient()
+    await supabase.from('transactions').update({
+      description: editForm.description,
+      amount: editForm.amount,
+      kind: editForm.kind,
+      is_recurring: editForm.is_recurring,
+      account_id: editForm.account_id,
+    }).eq('id', id)
+    setTxs(p => p.map(t => t.id === id ? { ...t, ...editForm } as Tx : t))
+    setEditing(null)
+    router.refresh()
+  }
 
   async function handleAdd(e: React.FormEvent) {
     e.preventDefault()
@@ -113,17 +129,55 @@ export function TransaccionesClient({ initial, cuentas }: { initial: Tx[]; cuent
             ? <Card><CardContent className="p-4 text-sm text-foreground-muted">Sin {label.toLowerCase()} registrados.</CardContent></Card>
             : items.map(t => (
               <Card key={t.id} className="mb-2">
-                <CardContent className="flex items-center justify-between p-4">
-                  <div>
-                    <p className="text-sm font-medium text-foreground">{t.description}</p>
-                    <p className="text-xs text-foreground-muted">{t.is_recurring ? 'Mensual' : 'Único'}</p>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <p className={`text-sm font-semibold ${color}`}>{formatCLP(t.amount)}</p>
-                    <button onClick={() => handleDelete(t.id)} className="text-foreground-subtle hover:text-red-500 transition-colors">
-                      <Trash2 className="h-4 w-4" />
-                    </button>
-                  </div>
+                <CardContent className="p-4">
+                  {editing === t.id ? (
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="flex flex-col gap-1.5 col-span-2">
+                        <label className="text-xs font-medium text-foreground-muted">Descripción</label>
+                        <input value={editForm.description ?? ''} onChange={e => setEditForm(p => ({ ...p, description: e.target.value }))} className="input" />
+                      </div>
+                      <div className="flex flex-col gap-1.5">
+                        <label className="text-xs font-medium text-foreground-muted">Monto ($)</label>
+                        <input type="number" value={editForm.amount ?? 0} onChange={e => setEditForm(p => ({ ...p, amount: Number(e.target.value) }))} className="input" />
+                      </div>
+                      <div className="flex flex-col gap-1.5">
+                        <label className="text-xs font-medium text-foreground-muted">Tipo</label>
+                        <select value={editForm.kind ?? 'income'} onChange={e => setEditForm(p => ({ ...p, kind: e.target.value }))} className="input">
+                          <option value="income">Ingreso</option>
+                          <option value="expense">Gasto</option>
+                        </select>
+                      </div>
+                      <div className="flex flex-col gap-1.5">
+                        <label className="text-xs font-medium text-foreground-muted">Cuenta</label>
+                        <select value={editForm.account_id ?? ''} onChange={e => setEditForm(p => ({ ...p, account_id: e.target.value }))} className="input">
+                          {cuentas.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                        </select>
+                      </div>
+                      <div className="flex flex-col gap-1.5">
+                        <label className="text-xs font-medium text-foreground-muted">¿Mensual?</label>
+                        <select value={editForm.is_recurring ? 'si' : 'no'} onChange={e => setEditForm(p => ({ ...p, is_recurring: e.target.value === 'si' }))} className="input">
+                          <option value="si">Sí</option>
+                          <option value="no">No</option>
+                        </select>
+                      </div>
+                      <div className="col-span-2 flex gap-2 justify-end">
+                        <button onClick={() => setEditing(null)} className="text-foreground-muted hover:text-foreground"><X className="h-4 w-4" /></button>
+                        <button onClick={() => handleEdit(t.id)} className="text-success hover:text-success/80"><Check className="h-4 w-4" /></button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-medium text-foreground">{t.description}</p>
+                        <p className="text-xs text-foreground-muted">{t.is_recurring ? 'Mensual' : 'Único'}</p>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <p className={`text-sm font-semibold ${color}`}>{formatCLP(t.amount)}</p>
+                        <button onClick={() => { setEditing(t.id); setEditForm(t) }} className="text-foreground-subtle hover:text-foreground"><Pencil className="h-3.5 w-3.5" /></button>
+                        <button onClick={() => handleDelete(t.id)} className="text-foreground-subtle hover:text-red-500"><Trash2 className="h-4 w-4" /></button>
+                      </div>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             ))

@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Plus, Trash2 } from 'lucide-react'
+import { Plus, Trash2, Pencil, Check, X } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/Button'
 import { Card, CardContent } from '@/components/ui/Card'
@@ -21,6 +21,22 @@ export function ObjetivosClient({ initial }: { initial: Objetivo[] }) {
   const [showing, setShowing] = useState(false)
   const [form, setForm] = useState({ name: '', kind: 'other', target_amount: '', current_amount: '', monthly_contribution: '', target_date: '' })
   const [loading, setLoading] = useState(false)
+  const [editing, setEditing] = useState<string | null>(null)
+  const [editForm, setEditForm] = useState<Partial<Objetivo>>({})
+
+  async function handleEdit(id: string) {
+    const supabase = createClient()
+    await supabase.from('objectives').update({
+      name: editForm.name, kind: editForm.kind,
+      target_amount: editForm.target_amount,
+      current_amount: editForm.current_amount,
+      monthly_contribution: editForm.monthly_contribution,
+      target_date: editForm.target_date,
+    }).eq('id', id)
+    setObjetivos(p => p.map(o => o.id === id ? { ...o, ...editForm } as Objetivo : o))
+    setEditing(null)
+    router.refresh()
+  }
 
   async function handleAdd(e: React.FormEvent) {
     e.preventDefault()
@@ -107,24 +123,60 @@ export function ObjetivosClient({ initial }: { initial: Objetivo[] }) {
         return (
           <Card key={o.id}>
             <CardContent className="p-5">
-              <div className="flex items-start justify-between mb-3">
-                <div>
-                  <p className="text-sm font-medium text-foreground">{o.name}</p>
-                  <p className="text-xs text-foreground-muted">{kindLabels[o.kind]} · {formatCLP(o.monthly_contribution)}/mes</p>
-                </div>
-                <div className="flex items-center gap-3">
-                  <div className="text-right">
-                    <p className="text-sm font-semibold text-foreground">{pct}%</p>
-                    <p className="text-xs text-foreground-muted">{formatCLP(o.current_amount)} / {formatCLP(o.target_amount)}</p>
+              {editing === o.id ? (
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-xs font-medium text-foreground-muted">Nombre</label>
+                    <input value={editForm.name ?? ''} onChange={e => setEditForm(p => ({ ...p, name: e.target.value }))} className="input" />
                   </div>
-                  <button onClick={() => handleDelete(o.id)} className="text-foreground-subtle hover:text-red-500 transition-colors">
-                    <Trash2 className="h-4 w-4" />
-                  </button>
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-xs font-medium text-foreground-muted">Categoría</label>
+                    <select value={editForm.kind ?? 'other'} onChange={e => setEditForm(p => ({ ...p, kind: e.target.value }))} className="input">
+                      {Object.entries(kindLabels).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+                    </select>
+                  </div>
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-xs font-medium text-foreground-muted">Meta ($)</label>
+                    <input type="number" value={editForm.target_amount ?? 0} onChange={e => setEditForm(p => ({ ...p, target_amount: Number(e.target.value) }))} className="input" />
+                  </div>
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-xs font-medium text-foreground-muted">Ahorrado ($)</label>
+                    <input type="number" value={editForm.current_amount ?? 0} onChange={e => setEditForm(p => ({ ...p, current_amount: Number(e.target.value) }))} className="input" />
+                  </div>
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-xs font-medium text-foreground-muted">Aporte mensual ($)</label>
+                    <input type="number" value={editForm.monthly_contribution ?? 0} onChange={e => setEditForm(p => ({ ...p, monthly_contribution: Number(e.target.value) }))} className="input" />
+                  </div>
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-xs font-medium text-foreground-muted">Fecha meta</label>
+                    <input type="date" value={editForm.target_date ?? ''} onChange={e => setEditForm(p => ({ ...p, target_date: e.target.value }))} className="input" />
+                  </div>
+                  <div className="col-span-2 flex gap-2 justify-end">
+                    <button onClick={() => setEditing(null)} className="text-foreground-muted hover:text-foreground"><X className="h-4 w-4" /></button>
+                    <button onClick={() => handleEdit(o.id)} className="text-success hover:text-success/80"><Check className="h-4 w-4" /></button>
+                  </div>
                 </div>
-              </div>
-              <div className="h-1.5 bg-border rounded-full overflow-hidden">
-                <div className="h-full bg-brand-500 rounded-full" style={{ width: `${pct}%` }} />
-              </div>
+              ) : (
+                <>
+                  <div className="flex items-start justify-between mb-3">
+                    <div>
+                      <p className="text-sm font-medium text-foreground">{o.name}</p>
+                      <p className="text-xs text-foreground-muted">{kindLabels[o.kind]} · {formatCLP(o.monthly_contribution)}/mes</p>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <div className="text-right">
+                        <p className="text-sm font-semibold text-foreground">{pct}%</p>
+                        <p className="text-xs text-foreground-muted">{formatCLP(o.current_amount)} / {formatCLP(o.target_amount)}</p>
+                      </div>
+                      <button onClick={() => { setEditing(o.id); setEditForm(o) }} className="text-foreground-subtle hover:text-foreground"><Pencil className="h-3.5 w-3.5" /></button>
+                      <button onClick={() => handleDelete(o.id)} className="text-foreground-subtle hover:text-red-500"><Trash2 className="h-4 w-4" /></button>
+                    </div>
+                  </div>
+                  <div className="h-1.5 bg-border rounded-full overflow-hidden">
+                    <div className="h-full bg-brand-500 rounded-full" style={{ width: `${pct}%` }} />
+                  </div>
+                </>
+              )}
             </CardContent>
           </Card>
         )
