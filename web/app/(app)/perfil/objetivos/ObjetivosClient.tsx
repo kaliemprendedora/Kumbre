@@ -10,16 +10,16 @@ import { formatCLP } from '@/lib/format'
 
 type Objetivo = { id: string; name: string; kind: string; target_amount: number; current_amount: number; target_date: string; monthly_contribution: number }
 
-const kindLabels: Record<string, string> = {
-  house: 'Casa', emergency: 'Emergencia', travel: 'Viaje',
-  education: 'Educación', retirement: 'Jubilación', other: 'Otro',
-}
+const kindSuggestions = [
+  'Casa', 'Emergencia', 'Viaje', 'Educación', 'Jubilación',
+  'Auto', 'Negocio', 'Salud', 'Tecnología', 'Otro',
+]
 
 export function ObjetivosClient({ initial }: { initial: Objetivo[] }) {
   const router = useRouter()
   const [objetivos, setObjetivos] = useState(initial)
   const [showing, setShowing] = useState(false)
-  const [form, setForm] = useState({ name: '', kind: 'other', target_amount: '', current_amount: '', monthly_contribution: '', target_date: '' })
+  const [form, setForm] = useState({ name: '', kind: '', target_amount: '', current_amount: '', monthly_contribution: '', target_date: '' })
   const [loading, setLoading] = useState(false)
   const [editing, setEditing] = useState<string | null>(null)
   const [editForm, setEditForm] = useState<Partial<Objetivo>>({})
@@ -85,10 +85,11 @@ export function ObjetivosClient({ initial }: { initial: Objetivo[] }) {
                   <input value={form.name} onChange={e => setForm(p => ({ ...p, name: e.target.value }))} required placeholder="Ej: Casa propia" className="input" />
                 </div>
                 <div className="flex flex-col gap-1.5">
-                  <label className="text-xs font-medium text-foreground-muted">Categoría</label>
-                  <select value={form.kind} onChange={e => setForm(p => ({ ...p, kind: e.target.value }))} className="input">
-                    {Object.entries(kindLabels).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
-                  </select>
+                  <label className="text-xs font-medium text-foreground-muted">Categoría (escribe o elige)</label>
+                  <input list="kind-suggestions" value={form.kind} onChange={e => setForm(p => ({ ...p, kind: e.target.value }))} placeholder="Ej: Viaje, Casa, Negocio..." className="input" />
+                  <datalist id="kind-suggestions">
+                    {kindSuggestions.map(s => <option key={s} value={s} />)}
+                  </datalist>
                 </div>
                 <div className="flex flex-col gap-1.5">
                   <label className="text-xs font-medium text-foreground-muted">Meta ($)</label>
@@ -133,9 +134,10 @@ export function ObjetivosClient({ initial }: { initial: Objetivo[] }) {
                   </div>
                   <div className="flex flex-col gap-1.5">
                     <label className="text-xs font-medium text-foreground-muted">Categoría</label>
-                    <select value={editForm.kind ?? 'other'} onChange={e => setEditForm(p => ({ ...p, kind: e.target.value }))} className="input">
-                      {Object.entries(kindLabels).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
-                    </select>
+                    <input list="kind-suggestions-edit" value={editForm.kind ?? ''} onChange={e => setEditForm(p => ({ ...p, kind: e.target.value }))} className="input" />
+                    <datalist id="kind-suggestions-edit">
+                      {kindSuggestions.map(s => <option key={s} value={s} />)}
+                    </datalist>
                   </div>
                   <div className="flex flex-col gap-1.5">
                     <label className="text-xs font-medium text-foreground-muted">Meta ($)</label>
@@ -163,7 +165,7 @@ export function ObjetivosClient({ initial }: { initial: Objetivo[] }) {
                   <div className="flex items-start justify-between mb-3">
                     <div>
                       <p className="text-sm font-medium text-foreground">{o.name}</p>
-                      <p className="text-xs text-foreground-muted">{kindLabels[o.kind]} · {formatCLP(o.monthly_contribution)}/mes</p>
+                      <p className="text-xs text-foreground-muted">{o.kind || 'Objetivo'} · {formatCLP(o.monthly_contribution)}/mes</p>
                     </div>
                     <div className="flex items-center gap-3">
                       <div className="text-right">
