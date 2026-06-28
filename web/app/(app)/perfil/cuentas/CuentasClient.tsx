@@ -11,14 +11,15 @@ import { formatCLP } from '@/lib/format'
 type Cuenta = { id: string; name: string; kind: string; balance: number; is_liquid: boolean }
 
 const kindLabels: Record<string, string> = {
-  checking: 'Cuenta corriente', savings: 'Ahorro', investment: 'Inversión', other: 'Otro',
+  checking: 'Cuenta corriente', savings: 'Ahorro', investment: 'Inversión',
+  credit_line: 'Línea de crédito', other: 'Otro',
 }
 
 export function CuentasClient({ initial }: { initial: Cuenta[] }) {
   const router = useRouter()
   const [cuentas, setCuentas] = useState(initial)
   const [showing, setShowing] = useState(false)
-  const [form, setForm] = useState({ name: '', kind: 'checking', balance: '', is_liquid: true })
+  const [form, setForm] = useState({ name: '', kind: 'checking', balance: '0', is_liquid: true })
   const [loading, setLoading] = useState(false)
   const [editing, setEditing] = useState<string | null>(null)
   const [editForm, setEditForm] = useState<Partial<Cuenta>>({})
@@ -43,12 +44,14 @@ export function CuentasClient({ initial }: { initial: Cuenta[] }) {
     e.preventDefault()
     setLoading(true)
     const supabase = createClient()
+    const { data: { user } } = await supabase.auth.getUser()
     const { data } = await supabase.from('accounts').insert({
+      user_id: user!.id,
       name: form.name, kind: form.kind,
-      balance: Math.round(Number(form.balance.replace(/\D/g, ''))),
+      balance: Math.round(Number(form.balance)),
       is_liquid: form.is_liquid,
     }).select().single()
-    if (data) { setCuentas(p => [...p, data]); setShowing(false); setForm({ name: '', kind: 'checking', balance: '', is_liquid: true }) }
+    if (data) { setCuentas(p => [...p, data]); setShowing(false); setForm({ name: '', kind: 'checking', balance: '0', is_liquid: true }) }
     setLoading(false)
     router.refresh()
   }
@@ -86,12 +89,13 @@ export function CuentasClient({ initial }: { initial: Cuenta[] }) {
                     <option value="checking">Cuenta corriente</option>
                     <option value="savings">Ahorro</option>
                     <option value="investment">Inversión</option>
+                    <option value="credit_line">Línea de crédito</option>
                     <option value="other">Otro</option>
                   </select>
                 </div>
                 <div className="flex flex-col gap-1.5">
-                  <label className="text-xs font-medium text-foreground-muted">Saldo ($)</label>
-                  <input value={form.balance} onChange={e => setForm(p => ({ ...p, balance: e.target.value }))} required placeholder="Ej: 1500000" className="input" />
+                  <label className="text-xs font-medium text-foreground-muted">Saldo ($) — puede ser negativo</label>
+                  <input type="number" value={form.balance} onChange={e => setForm(p => ({ ...p, balance: e.target.value }))} required placeholder="Ej: -500000" className="input" />
                 </div>
                 <div className="flex flex-col gap-1.5">
                   <label className="text-xs font-medium text-foreground-muted">¿Es líquida?</label>
@@ -129,6 +133,7 @@ export function CuentasClient({ initial }: { initial: Cuenta[] }) {
                     <option value="checking">Cuenta corriente</option>
                     <option value="savings">Ahorro</option>
                     <option value="investment">Inversión</option>
+                    <option value="credit_line">Línea de crédito</option>
                     <option value="other">Otro</option>
                   </select>
                 </div>
@@ -155,7 +160,7 @@ export function CuentasClient({ initial }: { initial: Cuenta[] }) {
                   <p className="text-xs text-foreground-muted">{kindLabels[c.kind]} · {c.is_liquid ? 'Líquida' : 'No líquida'}</p>
                 </div>
                 <div className="flex items-center gap-3">
-                  <p className="text-sm font-semibold text-foreground">{formatCLP(c.balance)}</p>
+                  <p className={`text-sm font-semibold ${c.balance < 0 ? 'text-danger' : 'text-foreground'}`}>{formatCLP(c.balance)}</p>
                   <button onClick={() => startEdit(c)} className="text-foreground-subtle hover:text-foreground transition-colors"><Pencil className="h-3.5 w-3.5" /></button>
                   <button onClick={() => handleDelete(c.id)} className="text-foreground-subtle hover:text-red-500 transition-colors"><Trash2 className="h-4 w-4" /></button>
                 </div>

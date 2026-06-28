@@ -42,8 +42,10 @@ export function DeudasClient({ initial }: { initial: Deuda[] }) {
     e.preventDefault()
     setLoading(true)
     const supabase = createClient()
+    const { data: { user } } = await supabase.auth.getUser()
     const parse = (v: string) => Math.round(Number(v.replace(/\D/g, '')))
     const { data } = await supabase.from('debts').insert({
+      user_id: user!.id,
       name: form.name, kind: form.kind,
       original_amount: parse(form.original_amount),
       remaining_amount: parse(form.remaining_amount),

@@ -42,8 +42,10 @@ export function ObjetivosClient({ initial }: { initial: Objetivo[] }) {
     e.preventDefault()
     setLoading(true)
     const supabase = createClient()
+    const { data: { user } } = await supabase.auth.getUser()
     const parse = (v: string) => Math.round(Number(v.replace(/\D/g, '')))
     const { data } = await supabase.from('objectives').insert({
+      user_id: user!.id,
       name: form.name, kind: form.kind,
       target_amount: parse(form.target_amount),
       current_amount: parse(form.current_amount),

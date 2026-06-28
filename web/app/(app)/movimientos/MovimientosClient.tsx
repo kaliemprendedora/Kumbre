@@ -35,7 +35,9 @@ export function MovimientosClient({ initial, cuentas }: { initial: Tx[]; cuentas
     if (!form.account_id) return
     setLoading(true)
     const supabase = createClient()
+    const { data: { user } } = await supabase.auth.getUser()
     const { data } = await supabase.from('transactions').insert({
+      user_id: user!.id,
       description: form.description,
       amount: Math.round(Number(form.amount.replace(/\D/g, ''))),
       kind: form.kind,
