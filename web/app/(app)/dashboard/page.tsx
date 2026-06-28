@@ -1,109 +1,131 @@
 import type { Metadata } from 'next'
-import { Wallet, TrendingUp, TrendingDown, Building2 } from 'lucide-react'
+import { Wallet, TrendingUp, TrendingDown, ShieldCheck, AlertTriangle } from 'lucide-react'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card'
+import { Badge } from '@/components/ui/Badge'
 import { StatCard } from '@/components/dashboard/StatCard'
 import { CashflowChart } from '@/components/dashboard/CashflowChart'
-import { ObjectiveCard } from '@/components/dashboard/ObjectiveCard'
 import { RecentTransactions } from '@/components/dashboard/RecentTransactions'
 import { UpcomingEvents } from '@/components/dashboard/UpcomingEvents'
-import {
-  mockAccounts,
-  mockObjectives,
-  mockTransactions,
-  mockCategories,
-  mockCashflow,
-  mockNetWorth,
-  mockUpcomingEvents,
-} from '@/data/mock'
-import { formatCurrency } from '@/lib/utils'
+import { GoalCard } from '@/components/dashboard/GoalCard'
+import { HealthScoreRing } from '@/components/dashboard/HealthScoreRing'
+import { mockCategories, mockTransactions, mockAccounts, mockUpcomingEvents } from '@/data/mock'
+import { getAnalysis } from '@/lib/kumbre'
+import { formatCurrency, formatPercent } from '@/lib/utils'
 
 export const metadata: Metadata = { title: 'Inicio' }
 
 export default function DashboardPage() {
-  const totalBalance = mockAccounts
-    .filter((a) => a.universeId === 'universe-personal')
-    .reduce((sum, a) => sum + a.balance, 0)
+  const { cashflow, netWorth, debt, goals, capacity, rules } = getAnalysis()
 
-  const cashflow = mockCashflow
-  const thisMonth = cashflow.at(-1)
-  const prevMonth = cashflow.at(-2)
-  const incomeTrend =
-    thisMonth && prevMonth && prevMonth.income > 0
-      ? Math.round(((thisMonth.income - prevMonth.income) / prevMonth.income) * 100)
-      : 0
-  const expenseTrend =
-    thisMonth && prevMonth && prevMonth.expenses > 0
-      ? Math.round(((thisMonth.expenses - prevMonth.expenses) / prevMonth.expenses) * 100)
-      : 0
-
-  const recentTransactions = [...mockTransactions]
+  const recentTx = [...mockTransactions]
     .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
     .slice(0, 5)
+
+  const chartData = [
+    { month: '2026-01-01', income: 3_500_000, expenses: 2_300_000, savings: 1_200_000 },
+    { month: '2026-02-01', income: 3_100_000, expenses: 2_450_000, savings: 650_000 },
+    { month: '2026-03-01', income: 3_800_000, expenses: 2_200_000, savings: 1_600_000 },
+    { month: '2026-04-01', income: 4_100_000, expenses: 2_600_000, savings: 1_500_000 },
+    { month: '2026-05-01', income: 3_700_000, expenses: 2_400_000, savings: 1_300_000 },
+    { month: '2026-06-01', income: cashflow.income, expenses: cashflow.expenses, savings: cashflow.net },
+  ]
+
+  const savingsPct = Math.round(cashflow.savingsRate * 100)
 
   return (
     <div className="flex flex-col gap-6 animate-slide-up">
       {/* Net worth banner */}
       <div className="rounded-[var(--radius-xl)] bg-gradient-to-br from-brand-600 to-brand-800 p-6 text-white shadow-[var(--shadow-lg)]">
-        <p className="text-sm font-medium text-brand-200 mb-1">Patrimonio neto</p>
-        <p className="text-4xl font-bold tracking-tight mb-3">
-          {formatCurrency(mockNetWorth.netWorth, 'CLP')}
-        </p>
-        <div className="flex items-center gap-2 text-sm">
-          <TrendingUp className="h-4 w-4 text-green-300" />
-          <span className="text-brand-200">
-            +{mockNetWorth.trend}% este mes
-          </span>
+        <div className="flex items-start justify-between">
+          <div>
+            <p className="text-sm font-medium text-brand-200 mb-1">Patrimonio neto</p>
+            <p className="text-4xl font-bold tracking-tight mb-3">
+              {formatCurrency(netWorth.netWorth, 'CLP')}
+            </p>
+            <div className="flex items-center gap-4 text-sm">
+              <span className="text-brand-200">
+                Activos {formatCurrency(netWorth.totalAssets, 'CLP')}
+              </span>
+              <span className="text-brand-300">·</span>
+              <span className="text-brand-200">
+                Pasivos {formatCurrency(netWorth.totalLiabilities, 'CLP')}
+              </span>
+            </div>
+          </div>
+          <HealthScoreRing score={capacity.financialHealthScore} />
         </div>
       </div>
 
       {/* Stat cards */}
       <div className="grid grid-cols-2 gap-4 xl:grid-cols-4">
         <StatCard
-          label="Saldo total"
-          value={formatCurrency(totalBalance, 'CLP')}
-          icon={<Wallet className="h-4 w-4" />}
-          accent="brand"
-        />
-        <StatCard
           label="Ingresos del mes"
-          value={formatCurrency(thisMonth?.income ?? 0, 'CLP')}
-          trend={incomeTrend}
+          value={formatCurrency(cashflow.income, 'CLP')}
           icon={<TrendingUp className="h-4 w-4" />}
           accent="success"
         />
         <StatCard
           label="Gastos del mes"
-          value={formatCurrency(thisMonth?.expenses ?? 0, 'CLP')}
-          trend={expenseTrend}
+          value={formatCurrency(cashflow.expenses, 'CLP')}
           icon={<TrendingDown className="h-4 w-4" />}
           accent="danger"
         />
         <StatCard
-          label="Activos totales"
-          value={formatCurrency(mockNetWorth.totalAssets, 'CLP')}
-          icon={<Building2 className="h-4 w-4" />}
+          label="Tasa de ahorro"
+          value={formatPercent(savingsPct, 0)}
+          trend={savingsPct >= 20 ? 0 : -1}
+          trendLabel={savingsPct >= 20 ? 'Meta cumplida' : 'Bajo el 20%'}
+          icon={<Wallet className="h-4 w-4" />}
+          accent={savingsPct >= 20 ? 'success' : 'warning'}
+        />
+        <StatCard
+          label="Liquidez disponible"
+          value={formatCurrency(netWorth.liquidAssets, 'CLP')}
+          icon={<ShieldCheck className="h-4 w-4" />}
           accent="brand"
         />
       </div>
 
       {/* Main content grid */}
       <div className="grid grid-cols-1 gap-6 xl:grid-cols-3">
-        {/* Cashflow chart — takes 2/3 */}
+        {/* Left/center col */}
         <div className="xl:col-span-2 space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle>Flujo de caja</CardTitle>
+              <CardTitle>Flujo de caja — últimos 6 meses</CardTitle>
             </CardHeader>
             <CardContent>
-              <CashflowChart data={mockCashflow} />
+              <CashflowChart data={chartData} />
             </CardContent>
           </Card>
 
-          <RecentTransactions transactions={recentTransactions} categories={mockCategories} />
+          <RecentTransactions transactions={recentTx} categories={mockCategories} />
         </div>
 
         {/* Right column */}
         <div className="space-y-4">
+          {/* Rules alerts */}
+          {rules.violations.length > 0 && (
+            <Card className="border-warning/40 bg-warning-bg/30">
+              <CardContent className="p-4">
+                <div className="flex items-center gap-2 mb-3">
+                  <AlertTriangle className="h-4 w-4 text-warning" />
+                  <span className="text-sm font-semibold text-foreground">Alertas financieras</span>
+                </div>
+                <ul className="space-y-2">
+                  {rules.violations.map((v) => (
+                    <li key={v.ruleId} className="flex items-center justify-between text-xs">
+                      <span className="text-foreground-muted">{v.label}</span>
+                      <Badge variant={v.priority === 'critical' ? 'danger' : 'warning'} size="sm">
+                        {v.priority === 'critical' ? 'Crítico' : 'Alto'}
+                      </Badge>
+                    </li>
+                  ))}
+                </ul>
+              </CardContent>
+            </Card>
+          )}
+
           <UpcomingEvents events={mockUpcomingEvents} />
 
           <div>
@@ -111,11 +133,34 @@ export default function DashboardPage() {
               Objetivos activos
             </h2>
             <div className="space-y-3">
-              {mockObjectives.slice(0, 3).map((obj) => (
-                <ObjectiveCard key={obj.id} objective={obj} />
+              {goals.objectives.slice(0, 3).map((obj) => (
+                <GoalCard key={obj.id} objective={obj} />
               ))}
             </div>
           </div>
+
+          {/* Debt summary */}
+          {debt.totalDebt > 0 && (
+            <Card>
+              <CardContent className="p-4">
+                <p className="text-xs font-semibold text-foreground-muted uppercase tracking-wide mb-3">Deuda activa</p>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-foreground-muted">Total pendiente</span>
+                  <span className="text-sm font-semibold text-foreground">{formatCurrency(debt.totalDebt, 'CLP')}</span>
+                </div>
+                <div className="flex items-center justify-between mt-1">
+                  <span className="text-sm text-foreground-muted">Cuota mensual</span>
+                  <span className="text-sm font-semibold text-foreground">{formatCurrency(debt.totalMonthlyPayment, 'CLP')}</span>
+                </div>
+                <div className="flex items-center justify-between mt-1">
+                  <span className="text-sm text-foreground-muted">DTI</span>
+                  <Badge variant={debt.riskLevel === 'low' ? 'success' : 'warning'} size="sm">
+                    {formatPercent(debt.debtToIncomeRatio * 100, 1)}
+                  </Badge>
+                </div>
+              </CardContent>
+            </Card>
+          )}
         </div>
       </div>
     </div>

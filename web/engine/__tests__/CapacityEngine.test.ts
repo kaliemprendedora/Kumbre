@@ -54,8 +54,8 @@ describe('CapacityEngine', () => {
     const snap = snapshotWith({
       accounts: [{ id: 'a1', name: 'Cuenta', kind: 'checking', balance: 50_000, isLiquid: true }],
       transactions: [
-        { id: 'tx-income', accountId: 'a1', amount: 1_000_000, kind: 'income', date: '2026-06-15T00:00:00Z', isRecurring: true, recurrencePattern: 'monthly', description: 'Sueldo', tags: [] },
-        { id: 'tx-exp', accountId: 'a1', amount: 950_000, kind: 'expense', date: '2026-06-15T00:00:00Z', isRecurring: true, recurrencePattern: 'monthly', description: 'Gastos', tags: [] },
+        { id: 'tx-income', accountId: 'a1', amount: 1_000_000, kind: 'income', date: '2026-06-15T00:00:00Z', isRecurring: true, description: 'Sueldo', tags: [] },
+        { id: 'tx-exp', accountId: 'a1', amount: 950_000, kind: 'expense', date: '2026-06-15T00:00:00Z', isRecurring: true, description: 'Gastos', tags: [] },
       ],
       debts: [{
         id: 'd1', name: 'Deuda Alta', kind: 'personal',
@@ -76,8 +76,8 @@ describe('CapacityEngine', () => {
   it('zeroes savingsCapacity when expenses exceed income', () => {
     const snap = snapshotWith({
       transactions: [
-        { id: 'tx-income', accountId: 'acc-1', amount: 500_000, kind: 'income', date: '2026-06-15T00:00:00Z', isRecurring: true, recurrencePattern: 'monthly', description: 'Sueldo', tags: [] },
-        { id: 'tx-exp', accountId: 'acc-1', amount: 700_000, kind: 'expense', date: '2026-06-15T00:00:00Z', isRecurring: true, recurrencePattern: 'monthly', description: 'Gastos', tags: [] },
+        { id: 'tx-income', accountId: 'acc-1', amount: 500_000, kind: 'income', date: '2026-06-15T00:00:00Z', isRecurring: true, description: 'Sueldo', tags: [] },
+        { id: 'tx-exp', accountId: 'acc-1', amount: 700_000, kind: 'expense', date: '2026-06-15T00:00:00Z', isRecurring: true, description: 'Gastos', tags: [] },
       ],
     })
     const result = buildCapacity(snap)

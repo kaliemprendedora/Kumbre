@@ -57,7 +57,7 @@ export default function ConfiguracionPage() {
         </CardContent>
       </Card>
 
-      <p className="text-center text-xs text-foreground-subtle">Kumbre v0.1.0 · Sprint 1</p>
+      <p className="text-center text-xs text-foreground-subtle">Kumbre v0.1.0 · MVP</p>
     </div>
   )
 }
