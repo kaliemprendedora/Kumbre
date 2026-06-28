@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/Button'
 import { Card, CardContent } from '@/components/ui/Card'
 import { formatCLP } from '@/lib/format'
 
-type Objetivo = { id: string; name: string; kind: string; target_amount: number; current_amount: number; target_date: string; monthly_contribution: number }
+type Objetivo = { id: string; name: string; kind: string; target_amount: number; current_amount: number; target_date: string; monthly_contribution: number; start_date?: string }
 
 const kindSuggestions = [
   'Casa', 'Emergencia', 'Viaje', 'Educación', 'Jubilación',
@@ -19,7 +19,7 @@ export function ObjetivosClient({ initial }: { initial: Objetivo[] }) {
   const router = useRouter()
   const [objetivos, setObjetivos] = useState(initial)
   const [showing, setShowing] = useState(false)
-  const [form, setForm] = useState({ name: '', kind: '', target_amount: '', current_amount: '', monthly_contribution: '', target_date: '' })
+  const [form, setForm] = useState({ name: '', kind: '', target_amount: '', current_amount: '', monthly_contribution: '', target_date: '', start_date: '' })
   const [loading, setLoading] = useState(false)
   const [editing, setEditing] = useState<string | null>(null)
   const [editForm, setEditForm] = useState<Partial<Objetivo>>({})
@@ -32,6 +32,7 @@ export function ObjetivosClient({ initial }: { initial: Objetivo[] }) {
       current_amount: editForm.current_amount,
       monthly_contribution: editForm.monthly_contribution,
       target_date: editForm.target_date,
+      start_date: editForm.start_date || null,
     }).eq('id', id)
     setObjetivos(p => p.map(o => o.id === id ? { ...o, ...editForm } as Objetivo : o))
     setEditing(null)
@@ -51,6 +52,7 @@ export function ObjetivosClient({ initial }: { initial: Objetivo[] }) {
       current_amount: parse(form.current_amount),
       monthly_contribution: parse(form.monthly_contribution),
       target_date: form.target_date,
+      start_date: form.start_date || null,
     }).select().single()
     if (data) { setObjetivos(p => [...p, data]); setShowing(false) }
     setLoading(false)
@@ -107,6 +109,11 @@ export function ObjetivosClient({ initial }: { initial: Objetivo[] }) {
                   <label className="text-xs font-medium text-foreground-muted">Fecha meta</label>
                   <input type="date" value={form.target_date} onChange={e => setForm(p => ({ ...p, target_date: e.target.value }))} required className="input" />
                 </div>
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-xs font-medium text-foreground-muted">Fecha de inicio (opcional)</label>
+                  <input type="date" value={form.start_date} onChange={e => setForm(p => ({ ...p, start_date: e.target.value }))} className="input" />
+                  <p className="text-[10px] text-foreground-muted">Déjalo vacío si empieza hoy. Útil para objetivos futuros.</p>
+                </div>
               </div>
               <div className="flex gap-2 justify-end">
                 <Button type="button" variant="ghost" size="sm" onClick={() => setShowing(false)}>Cancelar</Button>
@@ -155,6 +162,10 @@ export function ObjetivosClient({ initial }: { initial: Objetivo[] }) {
                     <label className="text-xs font-medium text-foreground-muted">Fecha meta</label>
                     <input type="date" value={editForm.target_date ?? ''} onChange={e => setEditForm(p => ({ ...p, target_date: e.target.value }))} className="input" />
                   </div>
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-xs font-medium text-foreground-muted">Fecha de inicio</label>
+                    <input type="date" value={editForm.start_date ?? ''} onChange={e => setEditForm(p => ({ ...p, start_date: e.target.value }))} className="input" />
+                  </div>
                   <div className="col-span-2 flex gap-2 justify-end">
                     <button onClick={() => setEditing(null)} className="text-foreground-muted hover:text-foreground"><X className="h-4 w-4" /></button>
                     <button onClick={() => handleEdit(o.id)} className="text-success hover:text-success/80"><Check className="h-4 w-4" /></button>
@@ -165,7 +176,10 @@ export function ObjetivosClient({ initial }: { initial: Objetivo[] }) {
                   <div className="flex items-start justify-between mb-3">
                     <div>
                       <p className="text-sm font-medium text-foreground">{o.name}</p>
-                      <p className="text-xs text-foreground-muted">{o.kind || 'Objetivo'} · {formatCLP(o.monthly_contribution)}/mes</p>
+                      <p className="text-xs text-foreground-muted">
+                        {o.kind || 'Objetivo'} · {formatCLP(o.monthly_contribution)}/mes
+                        {o.start_date && <span className="ml-1 text-brand-500">· Inicia {new Date(o.start_date).toLocaleDateString('es-CL', { month: 'short', year: 'numeric' })}</span>}
+                      </p>
                     </div>
                     <div className="flex items-center gap-3">
                       <div className="text-right">
