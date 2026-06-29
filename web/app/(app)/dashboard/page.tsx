@@ -83,7 +83,7 @@ export default async function DashboardPage() {
       </div>
 
       {/* Stat cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 xl:grid-cols-4 gap-3">
         <StatCard
           label="Ingresos del mes"
           value={formatCurrency(cashflow.income, 'CLP')}
