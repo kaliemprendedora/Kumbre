@@ -104,8 +104,8 @@ export function ProyeccionClient({ txs, cuentas }: { txs: Tx[]; cuentas: Cuenta[
   const totalNet = totalIncome - totalExpense
   const finalBalance = data[data.length - 1]?.Patrimonio ?? initialBalance
 
-  // For long horizons show fewer ticks
-  const tickInterval = horizon <= 1 ? 0 : horizon <= 3 ? 2 : horizon <= 5 ? 5 : 11
+  // Show fewer X-axis ticks so labels don't overlap on mobile
+  const tickInterval = horizon <= 1 ? 1 : horizon <= 2 ? 2 : horizon <= 3 ? 3 : horizon <= 5 ? 5 : 11
 
   return (
     <div className="flex flex-col gap-6 animate-slide-up">
@@ -211,24 +211,24 @@ export function ProyeccionClient({ txs, cuentas }: { txs: Tx[]; cuentas: Cuenta[
           <CardHeader><CardTitle>Detalle mensual</CardTitle></CardHeader>
           <CardContent className="p-0 pb-2">
             <div className="overflow-x-auto">
-              <table className="w-full text-xs">
+              <table className="w-full text-xs min-w-[400px]">
                 <thead>
                   <tr className="border-b border-border">
-                    <th className="text-left px-5 py-3 text-foreground-muted font-medium">Mes</th>
-                    <th className="text-right px-4 py-3 text-foreground-muted font-medium">Ingresos</th>
-                    <th className="text-right px-4 py-3 text-foreground-muted font-medium">Gastos</th>
-                    <th className="text-right px-4 py-3 text-foreground-muted font-medium">Ahorro</th>
-                    <th className="text-right px-5 py-3 text-foreground-muted font-medium">Patrimonio</th>
+                    <th className="text-left px-3 py-3 text-foreground-muted font-medium whitespace-nowrap">Mes</th>
+                    <th className="text-right px-3 py-3 text-foreground-muted font-medium whitespace-nowrap">Ingresos</th>
+                    <th className="text-right px-3 py-3 text-foreground-muted font-medium whitespace-nowrap">Gastos</th>
+                    <th className="text-right px-3 py-3 text-foreground-muted font-medium whitespace-nowrap">Ahorro</th>
+                    <th className="text-right px-3 py-3 text-foreground-muted font-medium whitespace-nowrap">Patrimonio</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border">
                   {data.map((row, i) => (
                     <tr key={i} className="hover:bg-border-subtle transition-colors">
-                      <td className="px-5 py-2.5 font-medium text-foreground">{row.label}</td>
-                      <td className="px-4 py-2.5 text-right text-success">{formatCurrency(row.Ingresos, 'CLP')}</td>
-                      <td className="px-4 py-2.5 text-right text-danger">{formatCurrency(row.Gastos, 'CLP')}</td>
-                      <td className={`px-4 py-2.5 text-right font-semibold ${row.Ahorro >= 0 ? 'text-success' : 'text-danger'}`}>{formatCurrency(row.Ahorro, 'CLP')}</td>
-                      <td className={`px-5 py-2.5 text-right font-semibold ${row.Patrimonio >= 0 ? 'text-foreground' : 'text-danger'}`}>{formatCurrency(row.Patrimonio, 'CLP')}</td>
+                      <td className="px-3 py-2.5 font-medium text-foreground whitespace-nowrap">{row.label}</td>
+                      <td className="px-3 py-2.5 text-right text-success whitespace-nowrap">{formatCurrency(row.Ingresos, 'CLP')}</td>
+                      <td className="px-3 py-2.5 text-right text-danger whitespace-nowrap">{formatCurrency(row.Gastos, 'CLP')}</td>
+                      <td className={`px-3 py-2.5 text-right font-semibold whitespace-nowrap ${row.Ahorro >= 0 ? 'text-success' : 'text-danger'}`}>{formatCurrency(row.Ahorro, 'CLP')}</td>
+                      <td className={`px-3 py-2.5 text-right font-semibold whitespace-nowrap ${row.Patrimonio >= 0 ? 'text-foreground' : 'text-danger'}`}>{formatCurrency(row.Patrimonio, 'CLP')}</td>
                     </tr>
                   ))}
                 </tbody>
