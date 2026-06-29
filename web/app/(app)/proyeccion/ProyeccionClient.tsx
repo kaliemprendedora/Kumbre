@@ -187,7 +187,7 @@ export function ProyeccionClient({ txs, cuentas }: { txs: Tx[]; cuentas: Cuenta[
                   <BarChart data={data} margin={{ top: 4, right: 12, left: -16, bottom: 20 }} barSize={14}>
                     <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
                     <XAxis dataKey="label" ticks={quarterlyTicks} tick={{ fontSize: 10, fill: 'var(--foreground-muted)' }} axisLine={false} tickLine={false} angle={-35} textAnchor="end" height={44} />
-                    <YAxis tick={{ fontSize: 10, fill: 'var(--foreground-muted)' }} axisLine={false} tickLine={false} tickFormatter={v => `$${(v / 1_000_000).toFixed(1)}M`} width={52} />
+                    <YAxis tick={{ fontSize: 10, fill: 'var(--foreground-muted)' }} axisLine={false} tickLine={false} tickFormatter={v => v === 0 ? '$0' : Math.abs(v) >= 1_000_000 ? `$${(v/1_000_000).toFixed(1)}M` : `$${Math.round(v/1000)}K`} width={56} />
                     <Tooltip content={<CustomTooltip />} />
                     <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: 11, paddingTop: 8 }} />
                     <ReferenceLine y={0} stroke="var(--border)" />
@@ -199,7 +199,7 @@ export function ProyeccionClient({ txs, cuentas }: { txs: Tx[]; cuentas: Cuenta[
                   <BarChart data={data} margin={{ top: 4, right: 12, left: -16, bottom: 20 }} barSize={20}>
                     <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
                     <XAxis dataKey="label" ticks={quarterlyTicks} tick={{ fontSize: 10, fill: 'var(--foreground-muted)' }} axisLine={false} tickLine={false} angle={-35} textAnchor="end" height={44} />
-                    <YAxis tick={{ fontSize: 10, fill: 'var(--foreground-muted)' }} axisLine={false} tickLine={false} tickFormatter={v => `$${(v / 1_000_000).toFixed(1)}M`} width={52} />
+                    <YAxis tick={{ fontSize: 10, fill: 'var(--foreground-muted)' }} axisLine={false} tickLine={false} tickFormatter={v => v === 0 ? '$0' : Math.abs(v) >= 1_000_000 ? `$${(v/1_000_000).toFixed(1)}M` : `$${Math.round(v/1000)}K`} width={56} />
                     <Tooltip content={<CustomTooltip />} />
                     <ReferenceLine y={0} stroke="var(--border)" />
                     <Bar dataKey="Patrimonio" fill="var(--brand-600, #4f46e5)" radius={[2, 2, 0, 0]} />
