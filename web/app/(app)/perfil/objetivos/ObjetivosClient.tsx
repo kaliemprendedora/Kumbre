@@ -223,7 +223,6 @@ export function ObjetivosClient({ initial }: { initial: Objetivo[] }) {
                 </div>
               </div>
 
-              {/* Mode selector */}
               <div className="flex flex-col gap-2">
                 <label className="text-xs font-medium text-foreground-muted">¿Cómo quieres planificar?</label>
                 <div className="grid grid-cols-3 gap-2">
@@ -252,7 +251,6 @@ export function ObjetivosClient({ initial }: { initial: Objetivo[] }) {
                 </div>
               </div>
 
-              {/* Mode-specific inputs */}
               {mode === 'por_fecha' && (
                 <div className="flex flex-col gap-1.5">
                   <label className="text-xs font-medium text-foreground-muted">Fecha meta</label>
@@ -317,7 +315,6 @@ export function ObjetivosClient({ initial }: { initial: Objetivo[] }) {
                 </div>
               )}
 
-              {/* Preview */}
               {calc && (
                 <div className="rounded-[var(--radius-md)] bg-brand-50 border border-brand-200 p-3 text-xs space-y-1">
                   {mode === 'por_fecha' && (
@@ -351,7 +348,6 @@ export function ObjetivosClient({ initial }: { initial: Objetivo[] }) {
                 </div>
               )}
 
-              {/* Start date */}
               <div className="flex flex-col gap-1.5">
                 <label className="text-xs font-medium text-foreground-muted">Fecha de inicio (opcional)</label>
                 <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} className="input" />
