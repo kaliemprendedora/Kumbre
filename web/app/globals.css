@@ -3,60 +3,60 @@
 /* ─── Kumbre Design Tokens ─────────────────────────────────────────────── */
 
 :root {
-  /* Surfaces */
-  --background: #fafafa;
+  /* Surfaces — light warm-white */
+  --background: #f8f7ff;
   --surface: #ffffff;
   --surface-raised: #ffffff;
-  --surface-overlay: rgba(255, 255, 255, 0.85);
+  --surface-overlay: rgba(255, 255, 255, 0.90);
 
   /* Borders */
-  --border: #e4e4e7;
-  --border-subtle: #f4f4f5;
-  --border-strong: #d1d1d6;
+  --border: #e2e0f0;
+  --border-subtle: #f0effe;
+  --border-strong: #c9c6e0;
 
   /* Foreground / Text */
-  --foreground: #09090b;
-  --foreground-muted: #71717a;
-  --foreground-subtle: #a1a1aa;
-  --foreground-inverted: #fafafa;
+  --foreground: #0d0b1e;
+  --foreground-muted: #6b6888;
+  --foreground-subtle: #a09cbf;
+  --foreground-inverted: #f8f7ff;
 
-  /* Brand — Indigo */
-  --brand-50: #eef2ff;
-  --brand-100: #e0e7ff;
-  --brand-200: #c7d2fe;
-  --brand-300: #a5b4fc;
-  --brand-400: #818cf8;
-  --brand-500: #6366f1;
-  --brand-600: #4f46e5;
-  --brand-700: #4338ca;
-  --brand-800: #3730a3;
-  --brand-900: #312e81;
+  /* Brand — Violet */
+  --brand-50: #f5f3ff;
+  --brand-100: #ede9fe;
+  --brand-200: #ddd6fe;
+  --brand-300: #c4b5fd;
+  --brand-400: #a78bfa;
+  --brand-500: #8b5cf6;
+  --brand-600: #7c3aed;
+  --brand-700: #6d28d9;
+  --brand-800: #5b21b6;
+  --brand-900: #4c1d95;
 
-  /* Semantic colors */
-  --success: #22c55e;
-  --success-bg: #f0fdf4;
-  --warning: #f59e0b;
+  /* Semantic colors — vivid */
+  --success: #00d97e;
+  --success-bg: #ecfdf5;
+  --warning: #fbbf24;
   --warning-bg: #fffbeb;
-  --danger: #ef4444;
-  --danger-bg: #fef2f2;
-  --info: #3b82f6;
-  --info-bg: #eff6ff;
+  --danger: #f43f5e;
+  --danger-bg: #fff1f3;
+  --info: #38bdf8;
+  --info-bg: #f0f9ff;
 
-  /* Chart palette */
-  --chart-1: #6366f1;
-  --chart-2: #22c55e;
-  --chart-3: #f59e0b;
-  --chart-4: #ec4899;
-  --chart-5: #14b8a6;
-  --chart-6: #8b5cf6;
+  /* Chart palette — vivid multi-color */
+  --chart-1: #8b5cf6;
+  --chart-2: #00d97e;
+  --chart-3: #fbbf24;
+  --chart-4: #f43f5e;
+  --chart-5: #38bdf8;
+  --chart-6: #fb923c;
 
   /* Shadows */
-  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.04);
-  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04);
-  --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.05), 0 2px 4px rgba(0, 0, 0, 0.04);
-  --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.05), 0 4px 6px rgba(0, 0, 0, 0.04);
-  --shadow-xl: 0 20px 25px rgba(0, 0, 0, 0.06), 0 8px 10px rgba(0, 0, 0, 0.04);
-  --shadow-focus: 0 0 0 3px rgba(99, 102, 241, 0.25);
+  --shadow-xs: 0 1px 2px rgba(100, 80, 200, 0.06);
+  --shadow-sm: 0 1px 3px rgba(100, 80, 200, 0.08), 0 1px 2px rgba(0, 0, 0, 0.04);
+  --shadow-md: 0 4px 12px rgba(100, 80, 200, 0.10), 0 2px 4px rgba(0, 0, 0, 0.04);
+  --shadow-lg: 0 10px 24px rgba(100, 80, 200, 0.12), 0 4px 8px rgba(0, 0, 0, 0.06);
+  --shadow-xl: 0 20px 40px rgba(100, 80, 200, 0.14), 0 8px 16px rgba(0, 0, 0, 0.08);
+  --shadow-focus: 0 0 0 3px rgba(139, 92, 246, 0.35);
 
   /* Radius */
   --radius-xs: 4px;
@@ -81,30 +81,36 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #09090b;
-    --surface: #111113;
-    --surface-raised: #18181b;
-    --surface-overlay: rgba(17, 17, 19, 0.9);
+    /* Dark mode — deep violet-black */
+    --background: #0c0a1a;
+    --surface: #13112a;
+    --surface-raised: #1c1840;
+    --surface-overlay: rgba(13, 10, 30, 0.92);
 
-    --border: #27272a;
-    --border-subtle: #18181b;
-    --border-strong: #3f3f46;
+    --border: #2a2550;
+    --border-subtle: #1c1840;
+    --border-strong: #3d3870;
 
-    --foreground: #fafafa;
-    --foreground-muted: #a1a1aa;
-    --foreground-subtle: #52525b;
-    --foreground-inverted: #09090b;
+    --foreground: #f0eeff;
+    --foreground-muted: #9b96c8;
+    --foreground-subtle: #5e5a88;
+    --foreground-inverted: #0c0a1a;
 
-    --success-bg: #052e16;
-    --warning-bg: #1c1400;
-    --danger-bg: #1f0a0a;
-    --info-bg: #0c1a35;
+    --success: #00d97e;
+    --success-bg: #00140b;
+    --warning: #fbbf24;
+    --warning-bg: #1a1200;
+    --danger: #f43f5e;
+    --danger-bg: #1f0510;
+    --info: #38bdf8;
+    --info-bg: #030d1a;
 
-    --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.3);
-    --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.4), 0 1px 2px rgba(0, 0, 0, 0.3);
-    --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.35), 0 2px 4px rgba(0, 0, 0, 0.3);
-    --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.4), 0 4px 6px rgba(0, 0, 0, 0.3);
-    --shadow-xl: 0 20px 25px rgba(0, 0, 0, 0.5), 0 8px 10px rgba(0, 0, 0, 0.4);
+    --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.5);
+    --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.6), 0 1px 2px rgba(0, 0, 0, 0.4);
+    --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.5), 0 2px 4px rgba(0, 0, 0, 0.4);
+    --shadow-lg: 0 10px 24px rgba(0, 0, 0, 0.6), 0 4px 8px rgba(0, 0, 0, 0.4);
+    --shadow-xl: 0 20px 40px rgba(0, 0, 0, 0.7), 0 8px 16px rgba(0, 0, 0, 0.5);
+    --shadow-focus: 0 0 0 3px rgba(139, 92, 246, 0.45);
   }
 }
 
@@ -281,7 +287,7 @@ body {
 /* ─── Selection ─────────────────────────────────────────────────────────── */
 
 ::selection {
-  background: var(--brand-200);
+  background: var(--brand-300);
   color: var(--brand-900);
 }
 
