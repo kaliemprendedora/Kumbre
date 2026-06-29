@@ -52,6 +52,7 @@ export function ObjetivosClient({ initial }: { initial: Objetivo[] }) {
   const [mode, setMode] = useState<CalcMode>('por_fecha')
   const [targetDate, setTargetDate] = useState('')
   const [monthlyInput, setMonthlyInput] = useState('')
+  const [startDate, setStartDate] = useState('')
 
   const parse = (v: string) => Math.max(0, Math.round(Number(v.replace(/\D/g, ''))))
 
@@ -90,7 +91,7 @@ export function ObjetivosClient({ initial }: { initial: Objetivo[] }) {
 
   function resetForm() {
     setName(''); setKind(''); setTarget(''); setCurrent('')
-    setTargetDate(''); setMonthlyInput(''); setMode('por_fecha')
+    setTargetDate(''); setMonthlyInput(''); setStartDate(''); setMode('por_fecha')
     setSaveError(''); setShowing(false)
   }
 
@@ -108,7 +109,7 @@ export function ObjetivosClient({ initial }: { initial: Objetivo[] }) {
       current_amount: parse(current),
       monthly_contribution: calc.monthly,
       target_date: calc.targetDate,
-      start_date: null,
+      start_date: startDate || null,
     }).select().single()
     if (error) {
       setSaveError('No se pudo guardar: ' + error.message)
@@ -252,6 +253,13 @@ export function ObjetivosClient({ initial }: { initial: Objetivo[] }) {
                   )}
                 </div>
               )}
+
+              {/* Optional start date */}
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs font-medium text-foreground-muted">Fecha de inicio (opcional)</label>
+                <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} className="input" />
+                <p className="text-[10px] text-foreground-muted">Déjalo vacío si empieza hoy. Útil para objetivos futuros.</p>
+              </div>
 
               {saveError && (
                 <p className="text-xs text-danger">{saveError}</p>
