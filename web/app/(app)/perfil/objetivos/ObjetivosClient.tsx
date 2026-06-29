@@ -114,7 +114,7 @@ export function ObjetivosClient({ initial }: { initial: Objetivo[] }) {
       setSaveError('No se pudo guardar: ' + error.message)
     } else if (data) {
       setObjetivos(p => [...p, data])
-      const msg = motivaciones[Math.floor(Math.random() * motivaciones.length)]
+      const msg = motivaciones[Math.floor(Math.random() * motivaciones.length)] ?? '¡Objetivo guardado!'
       setSuccessMsg(msg)
       setTimeout(() => setSuccessMsg(''), 4000)
       resetForm()
