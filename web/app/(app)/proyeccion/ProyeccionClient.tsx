@@ -173,36 +173,41 @@ export function ProyeccionClient({ txs, cuentas }: { txs: Tx[]; cuentas: Cuenta[
         </div>
       </div>
 
-      {/* Chart */}
+      {/* Chart — horizontally scrollable so every month has space */}
       <Card>
         <CardHeader>
           <CardTitle>{chartType === 'flujo' ? 'Flujo mensual proyectado' : 'Evolución del patrimonio'}</CardTitle>
         </CardHeader>
-        <CardContent>
-          <ResponsiveContainer width="100%" height={300}>
-            {chartType === 'flujo' ? (
-              <BarChart data={data} margin={{ top: 4, right: 4, left: -16, bottom: 0 }} barSize={horizon <= 2 ? 8 : 4}>
-                <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
-                <XAxis dataKey="label" tick={{ fontSize: 10, fill: 'var(--foreground-muted)' }} axisLine={false} tickLine={false} interval={tickInterval} angle={-35} textAnchor="end" height={40} />
-                <YAxis tick={{ fontSize: 10, fill: 'var(--foreground-muted)' }} axisLine={false} tickLine={false} tickFormatter={v => `$${(v / 1_000_000).toFixed(1)}M`} />
-                <Tooltip content={<CustomTooltip />} />
-                <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: 11, paddingTop: 12 }} />
-                <ReferenceLine y={0} stroke="var(--border)" />
-                <Bar dataKey="Ingresos" fill="var(--success)" opacity={0.8} radius={[2, 2, 0, 0]} />
-                <Bar dataKey="Gastos" fill="var(--danger)" opacity={0.8} radius={[2, 2, 0, 0]} />
-                <Bar dataKey="Ahorro" fill="var(--brand-500, #6366f1)" opacity={0.9} radius={[2, 2, 0, 0]} />
-              </BarChart>
-            ) : (
-              <BarChart data={data} margin={{ top: 4, right: 4, left: -16, bottom: 0 }} barSize={horizon <= 2 ? 8 : 4}>
-                <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
-                <XAxis dataKey="label" tick={{ fontSize: 10, fill: 'var(--foreground-muted)' }} axisLine={false} tickLine={false} interval={tickInterval} angle={-35} textAnchor="end" height={40} />
-                <YAxis tick={{ fontSize: 10, fill: 'var(--foreground-muted)' }} axisLine={false} tickLine={false} tickFormatter={v => `$${(v / 1_000_000).toFixed(1)}M`} />
-                <Tooltip content={<CustomTooltip />} />
-                <ReferenceLine y={0} stroke="var(--border)" />
-                <Bar dataKey="Patrimonio" fill="var(--brand-600, #4f46e5)" radius={[2, 2, 0, 0]} />
-              </BarChart>
-            )}
-          </ResponsiveContainer>
+        <CardContent className="p-0 pb-4">
+          <div className="overflow-x-auto">
+            {/* Fixed width: 40px per month, min 300px */}
+            <div style={{ width: Math.max(300, totalMonths * 40), minWidth: '100%' }}>
+              <ResponsiveContainer width="100%" height={280}>
+                {chartType === 'flujo' ? (
+                  <BarChart data={data} margin={{ top: 4, right: 12, left: -16, bottom: 20 }} barSize={14}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
+                    <XAxis dataKey="label" tick={{ fontSize: 10, fill: 'var(--foreground-muted)' }} axisLine={false} tickLine={false} interval={0} angle={-35} textAnchor="end" height={44} />
+                    <YAxis tick={{ fontSize: 10, fill: 'var(--foreground-muted)' }} axisLine={false} tickLine={false} tickFormatter={v => `$${(v / 1_000_000).toFixed(1)}M`} width={52} />
+                    <Tooltip content={<CustomTooltip />} />
+                    <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: 11, paddingTop: 8 }} />
+                    <ReferenceLine y={0} stroke="var(--border)" />
+                    <Bar dataKey="Ingresos" fill="var(--success)" opacity={0.8} radius={[2, 2, 0, 0]} />
+                    <Bar dataKey="Gastos" fill="var(--danger)" opacity={0.8} radius={[2, 2, 0, 0]} />
+                    <Bar dataKey="Ahorro" fill="var(--brand-500, #6366f1)" opacity={0.9} radius={[2, 2, 0, 0]} />
+                  </BarChart>
+                ) : (
+                  <BarChart data={data} margin={{ top: 4, right: 12, left: -16, bottom: 20 }} barSize={20}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
+                    <XAxis dataKey="label" tick={{ fontSize: 10, fill: 'var(--foreground-muted)' }} axisLine={false} tickLine={false} interval={0} angle={-35} textAnchor="end" height={44} />
+                    <YAxis tick={{ fontSize: 10, fill: 'var(--foreground-muted)' }} axisLine={false} tickLine={false} tickFormatter={v => `$${(v / 1_000_000).toFixed(1)}M`} width={52} />
+                    <Tooltip content={<CustomTooltip />} />
+                    <ReferenceLine y={0} stroke="var(--border)" />
+                    <Bar dataKey="Patrimonio" fill="var(--brand-600, #4f46e5)" radius={[2, 2, 0, 0]} />
+                  </BarChart>
+                )}
+              </ResponsiveContainer>
+            </div>
+          </div>
         </CardContent>
       </Card>
 
