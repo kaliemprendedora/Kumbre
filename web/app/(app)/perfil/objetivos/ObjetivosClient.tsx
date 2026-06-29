@@ -129,10 +129,6 @@ export function ObjetivosClient({ initial }: { initial: Objetivo[] }) {
     setSaveError(''); setShowing(false)
   }
 
-  function updateStage(i: number, field: keyof Stage, val: string) {
-    setStages(p => p.map((s, idx) => idx === i ? { ...s, [field]: Math.max(0, Number(val.replace(/\D/g, ''))) } : s))
-  }
-
   async function handleAdd(e: React.FormEvent) {
     e.preventDefault()
     if (!calc) return
@@ -275,28 +271,40 @@ export function ObjetivosClient({ initial }: { initial: Objetivo[] }) {
                 <div className="flex flex-col gap-3">
                   <label className="text-xs font-medium text-foreground-muted">Etapas de ahorro</label>
                   {stages.map((s, i) => (
-                    <div key={i} className="flex items-center gap-2">
-                      <span className="text-xs text-foreground-muted w-16 shrink-0">Etapa {i + 1}</span>
-                      <input
-                        type="number"
-                        min={1}
-                        value={s.months || ''}
-                        onChange={e => updateStage(i, 'months', e.target.value)}
-                        placeholder="Meses"
-                        className="input w-24 text-center"
-                      />
-                      <span className="text-xs text-foreground-muted shrink-0">meses a</span>
-                      <input
-                        value={s.amount || ''}
-                        onChange={e => updateStage(i, 'amount', e.target.value)}
-                        placeholder="$0/mes"
-                        className="input flex-1"
-                      />
-                      {stages.length > 1 && (
-                        <button type="button" onClick={() => setStages(p => p.filter((_, idx) => idx !== i))} className="text-foreground-subtle hover:text-danger">
-                          <X className="h-4 w-4" />
-                        </button>
-                      )}
+                    <div key={i} className="rounded-[var(--radius-md)] border border-border p-3 flex flex-col gap-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-medium text-foreground-muted">Etapa {i + 1}</span>
+                        {stages.length > 1 && (
+                          <button type="button" onClick={() => setStages(p => p.filter((_, idx) => idx !== i))} className="text-foreground-subtle hover:text-danger">
+                            <X className="h-3.5 w-3.5" />
+                          </button>
+                        )}
+                      </div>
+                      <div className="grid grid-cols-2 gap-2">
+                        <div className="flex flex-col gap-1">
+                          <label className="text-[10px] text-foreground-subtle">Duración (meses)</label>
+                          <input
+                            type="number"
+                            min={1}
+                            value={s.months || ''}
+                            onChange={e => setStages(p => p.map((st, idx) => idx === i ? { ...st, months: Math.max(1, Number(e.target.value)) } : st))}
+                            placeholder="3"
+                            className="input"
+                          />
+                        </div>
+                        <div className="flex flex-col gap-1">
+                          <label className="text-[10px] text-foreground-subtle">Monto mensual ($)</label>
+                          <input
+                            value={s.amount ? s.amount.toLocaleString('es-CL') : ''}
+                            onChange={e => {
+                              const val = Math.max(0, Math.round(Number(e.target.value.replace(/\D/g, ''))))
+                              setStages(p => p.map((st, idx) => idx === i ? { ...st, amount: val } : st))
+                            }}
+                            placeholder="300.000"
+                            className="input"
+                          />
+                        </div>
+                      </div>
                     </div>
                   ))}
                   <button
