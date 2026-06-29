@@ -8,27 +8,35 @@ import { createClient } from '@/lib/supabase/client'
 import { formatCurrency, formatDate } from '@/lib/utils'
 import { useRouter } from 'next/navigation'
 
-type Tx = { id: string; description: string; amount: number; kind: string; is_recurring: boolean; account_id: string; date: string }
-type Cuenta = { id: string; name: string }
+type Tx = { id: string; description: string; amount: number; kind: string; is_recurring: boolean; account_id: string; date: string; is_business: boolean }
+type Cuenta = { id: string; name: string; is_business: boolean }
 
 export function MovimientosClient({ initial, cuentas }: { initial: Tx[]; cuentas: Cuenta[] }) {
   const router = useRouter()
   const [txs, setTxs] = useState(initial)
   const [search, setSearch] = useState('')
   const [filterKind, setFilterKind] = useState<'all' | 'income' | 'expense'>('all')
+  const [tab, setTab] = useState<'personal' | 'negocio'>('personal')
   const [showing, setShowing] = useState(false)
   const [loading, setLoading] = useState(false)
-  const [form, setForm] = useState({ description: '', amount: '', kind: 'income', is_recurring: false, account_id: cuentas[0]?.id ?? '', date: new Date().toISOString().split('T')[0] })
+  const [form, setForm] = useState({
+    description: '', amount: '', kind: 'income', is_recurring: false,
+    account_id: cuentas[0]?.id ?? '', date: new Date().toISOString().split('T')[0], is_business: false,
+  })
 
   const accountMap = useMemo(() => new Map(cuentas.map(c => [c.id, c.name])), [cuentas])
+  const isBusiness = tab === 'negocio'
 
   const filtered = useMemo(() =>
     txs
+      .filter(t => t.is_business === isBusiness)
       .filter(t => filterKind === 'all' || t.kind === filterKind)
       .filter(t => !search || t.description.toLowerCase().includes(search.toLowerCase()))
       .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()),
-    [txs, search, filterKind]
+    [txs, search, filterKind, isBusiness]
   )
+
+  const tabCuentas = cuentas.filter(c => c.is_business === isBusiness)
 
   async function handleAdd(e: React.FormEvent) {
     e.preventDefault()
@@ -44,11 +52,12 @@ export function MovimientosClient({ initial, cuentas }: { initial: Tx[]; cuentas
       is_recurring: form.is_recurring,
       account_id: form.account_id,
       date: form.date,
+      is_business: isBusiness,
     }).select().single()
     if (data) {
       setTxs(p => [data, ...p])
       setShowing(false)
-      setForm({ description: '', amount: '', kind: 'income', is_recurring: false, account_id: cuentas[0]?.id ?? '', date: new Date().toISOString().split('T')[0] })
+      setForm({ description: '', amount: '', kind: 'income', is_recurring: false, account_id: tabCuentas[0]?.id ?? '', date: new Date().toISOString().split('T')[0], is_business: isBusiness })
     }
     setLoading(false)
     router.refresh()
@@ -63,6 +72,19 @@ export function MovimientosClient({ initial, cuentas }: { initial: Tx[]; cuentas
 
   return (
     <div className="flex flex-col gap-6 animate-slide-up">
+      {/* Tab selector */}
+      <div className="flex gap-1 p-1 bg-border-subtle rounded-[var(--radius-md)] w-fit">
+        {(['personal', 'negocio'] as const).map(t => (
+          <button
+            key={t}
+            onClick={() => { setTab(t); setShowing(false) }}
+            className={`px-4 py-1.5 text-sm font-medium rounded-[var(--radius-sm)] transition-colors capitalize ${tab === t ? 'bg-surface text-foreground shadow-sm' : 'text-foreground-muted hover:text-foreground'}`}
+          >
+            {t === 'personal' ? '👤 Personal' : '🏢 Negocio'}
+          </button>
+        ))}
+      </div>
+
       <div className="flex items-center justify-between gap-4">
         <div className="flex items-center gap-3 flex-1 max-w-md">
           <div className="relative flex-1">
@@ -80,15 +102,17 @@ export function MovimientosClient({ initial, cuentas }: { initial: Tx[]; cuentas
             <option value="expense">Gastos</option>
           </select>
         </div>
-        <Button variant="primary" size="sm" onClick={() => setShowing(true)} disabled={cuentas.length === 0}>
+        <Button variant="primary" size="sm" onClick={() => setShowing(true)} disabled={tabCuentas.length === 0}>
           <Plus className="h-3.5 w-3.5" />
           Movimiento
         </Button>
       </div>
 
-      {cuentas.length === 0 && (
+      {tabCuentas.length === 0 && (
         <div className="rounded-[var(--radius-lg)] bg-warning-bg border border-warning/30 p-4 text-sm text-foreground-muted">
-          Primero agrega una cuenta en <a href="/perfil/cuentas" className="underline font-medium text-foreground">Mi Perfil → Cuentas</a>.
+          {isBusiness
+            ? <>Primero agrega una cuenta de <strong>negocio</strong> en <a href="/perfil/cuentas" className="underline font-medium text-foreground">Mi Perfil → Cuentas</a>.</>
+            : <>Primero agrega una cuenta en <a href="/perfil/cuentas" className="underline font-medium text-foreground">Mi Perfil → Cuentas</a>.</>}
         </div>
       )}
 
@@ -96,7 +120,7 @@ export function MovimientosClient({ initial, cuentas }: { initial: Tx[]; cuentas
         <Card>
           <CardContent className="p-5">
             <form onSubmit={handleAdd} className="flex flex-col gap-4">
-              <h3 className="text-sm font-semibold">Nuevo movimiento</h3>
+              <h3 className="text-sm font-semibold">Nuevo movimiento {isBusiness ? '· Negocio' : '· Personal'}</h3>
               <div className="grid grid-cols-2 gap-3">
                 <div className="flex flex-col gap-1.5 col-span-2">
                   <label className="text-xs font-medium text-foreground-muted">Descripción</label>
@@ -116,7 +140,7 @@ export function MovimientosClient({ initial, cuentas }: { initial: Tx[]; cuentas
                 <div className="flex flex-col gap-1.5">
                   <label className="text-xs font-medium text-foreground-muted">Cuenta</label>
                   <select value={form.account_id} onChange={e => setForm(p => ({ ...p, account_id: e.target.value }))} className="input">
-                    {cuentas.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                    {tabCuentas.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                   </select>
                 </div>
                 <div className="flex flex-col gap-1.5">
@@ -144,7 +168,7 @@ export function MovimientosClient({ initial, cuentas }: { initial: Tx[]; cuentas
         <CardContent className="p-0">
           {filtered.length === 0 ? (
             <p className="text-center text-sm text-foreground-muted py-12">
-              {search ? 'Sin resultados para tu búsqueda.' : 'No tienes movimientos registrados.'}
+              {search ? 'Sin resultados para tu búsqueda.' : `No tienes movimientos ${isBusiness ? 'de negocio' : 'personales'} registrados.`}
             </p>
           ) : (
             <ul className="divide-y divide-border">

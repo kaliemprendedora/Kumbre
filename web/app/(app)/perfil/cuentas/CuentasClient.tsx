@@ -19,10 +19,14 @@ export function CuentasClient({ initial }: { initial: Cuenta[] }) {
   const router = useRouter()
   const [cuentas, setCuentas] = useState(initial)
   const [showing, setShowing] = useState(false)
+  const [tab, setTab] = useState<'personal' | 'negocio'>('personal')
   const [form, setForm] = useState({ name: '', kind: 'checking', balance: '0', is_liquid: true, is_business: false })
   const [loading, setLoading] = useState(false)
   const [editing, setEditing] = useState<string | null>(null)
   const [editForm, setEditForm] = useState<Partial<Cuenta>>({})
+
+  const isBusiness = tab === 'negocio'
+  const tabCuentas = cuentas.filter(c => c.is_business === isBusiness)
 
   function startEdit(c: Cuenta) {
     setEditing(c.id)
@@ -50,9 +54,9 @@ export function CuentasClient({ initial }: { initial: Cuenta[] }) {
       name: form.name, kind: form.kind,
       balance: Math.round(Number(form.balance)),
       is_liquid: form.is_liquid,
-      is_business: form.is_business,
+      is_business: isBusiness,
     }).select().single()
-    if (data) { setCuentas(p => [...p, data]); setShowing(false); setForm({ name: '', kind: 'checking', balance: '0', is_liquid: true, is_business: false }) }
+    if (data) { setCuentas(p => [...p, data]); setShowing(false); setForm({ name: '', kind: 'checking', balance: '0', is_liquid: true, is_business: isBusiness }) }
     setLoading(false)
     router.refresh()
   }
@@ -74,11 +78,24 @@ export function CuentasClient({ initial }: { initial: Cuenta[] }) {
         <Button size="sm" onClick={() => setShowing(true)}><Plus className="h-4 w-4 mr-1" />Agregar</Button>
       </div>
 
+      {/* Tab selector */}
+      <div className="flex gap-1 p-1 bg-border-subtle rounded-[var(--radius-md)] w-fit">
+        {(['personal', 'negocio'] as const).map(t => (
+          <button
+            key={t}
+            onClick={() => { setTab(t); setShowing(false) }}
+            className={`px-4 py-1.5 text-sm font-medium rounded-[var(--radius-sm)] transition-colors ${tab === t ? 'bg-surface text-foreground shadow-sm' : 'text-foreground-muted hover:text-foreground'}`}
+          >
+            {t === 'personal' ? '👤 Personal' : '🏢 Negocio'}
+          </button>
+        ))}
+      </div>
+
       {showing && (
         <Card>
           <CardContent className="p-5">
             <form onSubmit={handleAdd} className="flex flex-col gap-4">
-              <h3 className="text-sm font-semibold">Nueva cuenta</h3>
+              <h3 className="text-sm font-semibold">Nueva cuenta {isBusiness ? '· Negocio' : '· Personal'}</h3>
               <div className="grid grid-cols-2 gap-3">
                 <div className="flex flex-col gap-1.5">
                   <label className="text-xs font-medium text-foreground-muted">Nombre</label>
@@ -105,13 +122,6 @@ export function CuentasClient({ initial }: { initial: Cuenta[] }) {
                     <option value="no">No (bloqueada)</option>
                   </select>
                 </div>
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-xs font-medium text-foreground-muted">¿Es del negocio?</label>
-                  <select value={form.is_business ? 'si' : 'no'} onChange={e => setForm(p => ({ ...p, is_business: e.target.value === 'si' }))} className="input">
-                    <option value="no">No (personal)</option>
-                    <option value="si">Sí (negocio)</option>
-                  </select>
-                </div>
               </div>
               <div className="flex gap-2 justify-end">
                 <Button type="button" variant="ghost" size="sm" onClick={() => setShowing(false)}>Cancelar</Button>
@@ -122,11 +132,13 @@ export function CuentasClient({ initial }: { initial: Cuenta[] }) {
         </Card>
       )}
 
-      {cuentas.length === 0 && !showing && (
-        <Card><CardContent className="p-8 text-center text-sm text-foreground-muted">No tienes cuentas. Agrega tu primera cuenta.</CardContent></Card>
+      {tabCuentas.length === 0 && !showing && (
+        <Card><CardContent className="p-8 text-center text-sm text-foreground-muted">
+          {isBusiness ? 'No tienes cuentas de negocio. Agrega tu primera cuenta.' : 'No tienes cuentas personales. Agrega tu primera cuenta.'}
+        </CardContent></Card>
       )}
 
-      {cuentas.map(c => (
+      {tabCuentas.map(c => (
         <Card key={c.id}>
           <CardContent className="p-5">
             {editing === c.id ? (
@@ -165,7 +177,7 @@ export function CuentasClient({ initial }: { initial: Cuenta[] }) {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-foreground">{c.name}</p>
-                  <p className="text-xs text-foreground-muted">{kindLabels[c.kind]} · {c.is_liquid ? 'Líquida' : 'No líquida'}{c.is_business ? ' · Negocio' : ''}</p>
+                  <p className="text-xs text-foreground-muted">{kindLabels[c.kind]} · {c.is_liquid ? 'Líquida' : 'No líquida'}</p>
                 </div>
                 <div className="flex items-center gap-3">
                   <p className={`text-sm font-semibold ${c.balance < 0 ? 'text-danger' : 'text-foreground'}`}>{formatCLP(c.balance)}</p>

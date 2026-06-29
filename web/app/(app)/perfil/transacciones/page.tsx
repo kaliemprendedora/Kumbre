@@ -9,7 +9,7 @@ export default async function TransaccionesPage() {
   const { data: { user } } = await supabase.auth.getUser()
   const [{ data: txs }, { data: cuentas }] = await Promise.all([
     supabase.from('transactions').select('*').eq('user_id', user!.id).order('created_at'),
-    supabase.from('accounts').select('id, name').eq('user_id', user!.id),
+    supabase.from('accounts').select('id, name, is_business').eq('user_id', user!.id),
   ])
   return <TransaccionesClient initial={txs ?? []} cuentas={cuentas ?? []} />
 }

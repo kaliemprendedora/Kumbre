@@ -10,7 +10,7 @@ export default async function MovimientosPage() {
 
   const [txsRes, cuentasRes] = await Promise.all([
     supabase.from('transactions').select('*').eq('user_id', user!.id).order('date', { ascending: false }),
-    supabase.from('accounts').select('id, name').eq('user_id', user!.id),
+    supabase.from('accounts').select('id, name, is_business').eq('user_id', user!.id),
   ])
 
   return (

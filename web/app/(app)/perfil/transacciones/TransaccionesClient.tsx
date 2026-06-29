@@ -9,16 +9,25 @@ import { Card, CardContent } from '@/components/ui/Card'
 import { formatCLP } from '@/lib/format'
 
 type Tx = { id: string; description: string; amount: number; kind: string; is_recurring: boolean; account_id: string; is_business: boolean }
-type Cuenta = { id: string; name: string }
+type Cuenta = { id: string; name: string; is_business: boolean }
 
 export function TransaccionesClient({ initial, cuentas }: { initial: Tx[]; cuentas: Cuenta[] }) {
   const router = useRouter()
   const [txs, setTxs] = useState(initial)
+  const [tab, setTab] = useState<'personal' | 'negocio'>('personal')
   const [showing, setShowing] = useState(false)
-  const [form, setForm] = useState({ description: '', amount: '', kind: 'income', is_recurring: true, account_id: cuentas[0]?.id ?? '', is_business: false })
   const [loading, setLoading] = useState(false)
   const [editing, setEditing] = useState<string | null>(null)
   const [editForm, setEditForm] = useState<Partial<Tx>>({})
+
+  const isBusiness = tab === 'negocio'
+  const tabCuentas = cuentas.filter(c => c.is_business === isBusiness)
+  const tabTxs = txs.filter(t => t.is_business === isBusiness)
+
+  const [form, setForm] = useState({ description: '', amount: '', kind: 'income', is_recurring: true, account_id: cuentas.find(c => !c.is_business)?.id ?? '' })
+
+  const ingresos = tabTxs.filter(t => t.kind === 'income')
+  const gastos = tabTxs.filter(t => t.kind === 'expense')
 
   async function handleEdit(id: string) {
     const supabase = createClient()
@@ -47,7 +56,7 @@ export function TransaccionesClient({ initial, cuentas }: { initial: Tx[]; cuent
       kind: form.kind,
       is_recurring: form.is_recurring,
       account_id: form.account_id,
-      is_business: form.is_business,
+      is_business: isBusiness,
       date: new Date().toISOString().split('T')[0],
     }).select().single()
     if (data) { setTxs(p => [...p, data]); setShowing(false) }
@@ -62,9 +71,6 @@ export function TransaccionesClient({ initial, cuentas }: { initial: Tx[]; cuent
     router.refresh()
   }
 
-  const ingresos = txs.filter(t => t.kind === 'income')
-  const gastos = txs.filter(t => t.kind === 'expense')
-
   return (
     <div className="flex flex-col gap-6 animate-slide-up max-w-2xl">
       <div className="flex items-center justify-between">
@@ -72,20 +78,37 @@ export function TransaccionesClient({ initial, cuentas }: { initial: Tx[]; cuent
           <h2 className="text-lg font-semibold text-foreground">Ingresos y Gastos</h2>
           <p className="text-sm text-foreground-muted">Tus entradas y salidas de dinero mensuales</p>
         </div>
-        <Button size="sm" onClick={() => setShowing(true)} disabled={cuentas.length === 0}>
+        <Button size="sm" onClick={() => setShowing(true)} disabled={tabCuentas.length === 0}>
           <Plus className="h-4 w-4 mr-1" />Agregar
         </Button>
       </div>
 
-      {cuentas.length === 0 && (
-        <Card><CardContent className="p-5 text-sm text-foreground-muted">Primero debes agregar al menos una cuenta en <strong>Cuentas</strong>.</CardContent></Card>
+      {/* Tab selector */}
+      <div className="flex gap-1 p-1 bg-border-subtle rounded-[var(--radius-md)] w-fit">
+        {(['personal', 'negocio'] as const).map(t => (
+          <button
+            key={t}
+            onClick={() => { setTab(t); setShowing(false) }}
+            className={`px-4 py-1.5 text-sm font-medium rounded-[var(--radius-sm)] transition-colors ${tab === t ? 'bg-surface text-foreground shadow-sm' : 'text-foreground-muted hover:text-foreground'}`}
+          >
+            {t === 'personal' ? '👤 Personal' : '🏢 Negocio'}
+          </button>
+        ))}
+      </div>
+
+      {tabCuentas.length === 0 && (
+        <Card><CardContent className="p-5 text-sm text-foreground-muted">
+          {isBusiness
+            ? <>Primero debes agregar una cuenta de <strong>negocio</strong> en <strong>Cuentas</strong>.</>
+            : <>Primero debes agregar al menos una cuenta en <strong>Cuentas</strong>.</>}
+        </CardContent></Card>
       )}
 
       {showing && (
         <Card>
           <CardContent className="p-5">
             <form onSubmit={handleAdd} className="flex flex-col gap-4">
-              <h3 className="text-sm font-semibold">Nuevo ingreso o gasto</h3>
+              <h3 className="text-sm font-semibold">Nuevo ingreso o gasto {isBusiness ? '· Negocio' : '· Personal'}</h3>
               <div className="grid grid-cols-2 gap-3">
                 <div className="flex flex-col gap-1.5 col-span-2">
                   <label className="text-xs font-medium text-foreground-muted">Descripción</label>
@@ -105,7 +128,7 @@ export function TransaccionesClient({ initial, cuentas }: { initial: Tx[]; cuent
                 <div className="flex flex-col gap-1.5">
                   <label className="text-xs font-medium text-foreground-muted">Cuenta</label>
                   <select value={form.account_id} onChange={e => setForm(p => ({ ...p, account_id: e.target.value }))} className="input">
-                    {cuentas.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                    {tabCuentas.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                   </select>
                 </div>
                 <div className="flex flex-col gap-1.5">
@@ -113,13 +136,6 @@ export function TransaccionesClient({ initial, cuentas }: { initial: Tx[]; cuent
                   <select value={form.is_recurring ? 'si' : 'no'} onChange={e => setForm(p => ({ ...p, is_recurring: e.target.value === 'si' }))} className="input">
                     <option value="si">Sí (mensual)</option>
                     <option value="no">No (único)</option>
-                  </select>
-                </div>
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-xs font-medium text-foreground-muted">¿Es del negocio?</label>
-                  <select value={form.is_business ? 'si' : 'no'} onChange={e => setForm(p => ({ ...p, is_business: e.target.value === 'si' }))} className="input">
-                    <option value="no">No (personal)</option>
-                    <option value="si">Sí (negocio)</option>
                   </select>
                 </div>
               </div>
@@ -160,7 +176,7 @@ export function TransaccionesClient({ initial, cuentas }: { initial: Tx[]; cuent
                       <div className="flex flex-col gap-1.5">
                         <label className="text-xs font-medium text-foreground-muted">Cuenta</label>
                         <select value={editForm.account_id ?? ''} onChange={e => setEditForm(p => ({ ...p, account_id: e.target.value }))} className="input">
-                          {cuentas.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                          {tabCuentas.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                         </select>
                       </div>
                       <div className="flex flex-col gap-1.5">
