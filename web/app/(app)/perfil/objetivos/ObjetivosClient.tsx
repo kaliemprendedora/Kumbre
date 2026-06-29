@@ -2,14 +2,15 @@
 
 import { useState, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
-import { Plus, Trash2, Pencil, Check, X, Calendar, Banknote } from 'lucide-react'
+import { Plus, Trash2, Pencil, Check, X, Calendar, Banknote, ListOrdered } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/Button'
 import { Card, CardContent } from '@/components/ui/Card'
 import { formatCLP } from '@/lib/format'
 
 type Objetivo = { id: string; name: string; kind: string; target_amount: number; current_amount: number; target_date: string; monthly_contribution: number; start_date?: string }
-type CalcMode = 'por_fecha' | 'por_aporte'
+type CalcMode = 'por_fecha' | 'por_aporte' | 'por_etapas'
+type Stage = { months: number; amount: number }
 
 const kindSuggestions = [
   'Casa', 'Emergencia', 'Viaje', 'Educación', 'Jubilación',
@@ -44,7 +45,6 @@ export function ObjetivosClient({ initial }: { initial: Objetivo[] }) {
   const [editing, setEditing] = useState<string | null>(null)
   const [editForm, setEditForm] = useState<Partial<Objetivo>>({})
 
-  // New objective form state
   const [name, setName] = useState('')
   const [kind, setKind] = useState('')
   const [target, setTarget] = useState('')
@@ -53,21 +53,23 @@ export function ObjetivosClient({ initial }: { initial: Objetivo[] }) {
   const [targetDate, setTargetDate] = useState('')
   const [monthlyInput, setMonthlyInput] = useState('')
   const [startDate, setStartDate] = useState('')
+  const [stages, setStages] = useState<Stage[]>([{ months: 3, amount: 0 }])
 
-  const parse = (v: string) => Math.max(0, Math.round(Number(v.replace(/\D/g, ''))))
+  const parse = (v: string | number) =>
+    typeof v === 'number' ? v : Math.max(0, Math.round(Number(String(v).replace(/\D/g, ''))))
 
-  // Auto-calculate the derived value
+  const from = useMemo(() => startDate ? new Date(startDate) : new Date(), [startDate])
+
   const calc = useMemo(() => {
     const targetAmt = parse(target)
     const currentAmt = parse(current)
     const remaining = Math.max(0, targetAmt - currentAmt)
-    const from = startDate ? new Date(startDate) : new Date()
 
     if (mode === 'por_fecha' && targetDate) {
       const months = monthsDiff(from, new Date(targetDate))
       if (months <= 0) return null
       const monthly = Math.ceil(remaining / months)
-      return { monthly, targetDate, months }
+      return { monthly, targetDate, months, stages: null }
     }
 
     if (mode === 'por_aporte' && monthlyInput) {
@@ -76,11 +78,41 @@ export function ObjetivosClient({ initial }: { initial: Objetivo[] }) {
       const months = Math.ceil(remaining / monthly)
       if (months > 1200) return null
       const date = addMonths(from, months)
-      return { monthly, targetDate: formatDateInput(date), months }
+      return { monthly, targetDate: formatDateInput(date), months, stages: null }
+    }
+
+    if (mode === 'por_etapas' && stages.length > 0) {
+      const validStages = stages.filter(s => s.months > 0 && s.amount > 0)
+      if (validStages.length === 0) return null
+      let accumulated = currentAmt
+      let totalMonths = 0
+      let reachedAt: number | null = null
+      for (const s of validStages) {
+        for (let m = 0; m < s.months; m++) {
+          accumulated += s.amount
+          totalMonths++
+          if (reachedAt === null && accumulated >= targetAmt) {
+            reachedAt = totalMonths
+          }
+        }
+      }
+      const finalDate = addMonths(from, totalMonths)
+      const reachDate = reachedAt !== null ? addMonths(from, reachedAt) : null
+      const firstStage = validStages[0]
+      if (!firstStage) return null
+      return {
+        monthly: firstStage.amount,
+        targetDate: reachDate ? formatDateInput(reachDate) : formatDateInput(finalDate),
+        months: reachedAt ?? totalMonths,
+        accumulated,
+        targetAmt,
+        reachDate,
+        stages: validStages,
+      }
     }
 
     return null
-  }, [target, current, mode, targetDate, monthlyInput, startDate])
+  }, [target, current, mode, targetDate, monthlyInput, startDate, stages, from])
 
   const motivaciones = [
     '¡Vas a lograrlo! Cada peso cuenta. 💪',
@@ -92,8 +124,13 @@ export function ObjetivosClient({ initial }: { initial: Objetivo[] }) {
 
   function resetForm() {
     setName(''); setKind(''); setTarget(''); setCurrent('')
-    setTargetDate(''); setMonthlyInput(''); setStartDate(''); setMode('por_fecha')
+    setTargetDate(''); setMonthlyInput(''); setStartDate('')
+    setStages([{ months: 3, amount: 0 }]); setMode('por_fecha')
     setSaveError(''); setShowing(false)
+  }
+
+  function updateStage(i: number, field: keyof Stage, val: string) {
+    setStages(p => p.map((s, idx) => idx === i ? { ...s, [field]: Math.max(0, Number(val.replace(/\D/g, ''))) } : s))
   }
 
   async function handleAdd(e: React.FormEvent) {
@@ -111,6 +148,7 @@ export function ObjetivosClient({ initial }: { initial: Objetivo[] }) {
       monthly_contribution: calc.monthly,
       target_date: calc.targetDate,
       start_date: startDate || null,
+      contribution_schedule: calc.stages ? calc.stages : null,
     }).select().single()
     if (error) {
       setSaveError('No se pudo guardar: ' + error.message)
@@ -169,7 +207,6 @@ export function ObjetivosClient({ initial }: { initial: Objetivo[] }) {
             <form onSubmit={handleAdd} className="flex flex-col gap-4">
               <h3 className="text-sm font-semibold">Nuevo objetivo</h3>
 
-              {/* Name + category */}
               <div className="grid grid-cols-2 gap-3">
                 <div className="flex flex-col gap-1.5">
                   <label className="text-xs font-medium text-foreground-muted">Nombre</label>
@@ -193,78 +230,127 @@ export function ObjetivosClient({ initial }: { initial: Objetivo[] }) {
               {/* Mode selector */}
               <div className="flex flex-col gap-2">
                 <label className="text-xs font-medium text-foreground-muted">¿Cómo quieres planificar?</label>
-                <div className="grid grid-cols-2 gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setMode('por_fecha')}
-                    className={`flex items-center gap-2 rounded-[var(--radius-md)] border p-3 text-left text-xs transition-colors ${
-                      mode === 'por_fecha'
-                        ? 'border-brand-500 bg-brand-50 text-brand-700'
-                        : 'border-border text-foreground-muted hover:border-brand-300'
-                    }`}
-                  >
-                    <Calendar className="h-4 w-4 shrink-0" />
-                    <div>
-                      <p className="font-semibold">Por fecha</p>
-                      <p className="text-[10px] opacity-80">Fijo cuándo quiero lograrlo</p>
-                    </div>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setMode('por_aporte')}
-                    className={`flex items-center gap-2 rounded-[var(--radius-md)] border p-3 text-left text-xs transition-colors ${
-                      mode === 'por_aporte'
-                        ? 'border-brand-500 bg-brand-50 text-brand-700'
-                        : 'border-border text-foreground-muted hover:border-brand-300'
-                    }`}
-                  >
-                    <Banknote className="h-4 w-4 shrink-0" />
-                    <div>
-                      <p className="font-semibold">Por aporte</p>
-                      <p className="text-[10px] opacity-80">Fijo cuánto puedo ahorrar/mes</p>
-                    </div>
-                  </button>
+                <div className="grid grid-cols-3 gap-2">
+                  {([
+                    { value: 'por_fecha', icon: <Calendar className="h-4 w-4 shrink-0" />, label: 'Por fecha', desc: 'Fijo cuándo quiero lograrlo' },
+                    { value: 'por_aporte', icon: <Banknote className="h-4 w-4 shrink-0" />, label: 'Por aporte', desc: 'Fijo cuánto puedo ahorrar/mes' },
+                    { value: 'por_etapas', icon: <ListOrdered className="h-4 w-4 shrink-0" />, label: 'Por etapas', desc: 'Montos distintos según el período' },
+                  ] as const).map(opt => (
+                    <button
+                      key={opt.value}
+                      type="button"
+                      onClick={() => setMode(opt.value)}
+                      className={`flex items-center gap-2 rounded-[var(--radius-md)] border p-3 text-left text-xs transition-colors ${
+                        mode === opt.value
+                          ? 'border-brand-500 bg-brand-50 text-brand-700'
+                          : 'border-border text-foreground-muted hover:border-brand-300'
+                      }`}
+                    >
+                      {opt.icon}
+                      <div>
+                        <p className="font-semibold">{opt.label}</p>
+                        <p className="text-[10px] opacity-80">{opt.desc}</p>
+                      </div>
+                    </button>
+                  ))}
                 </div>
               </div>
 
-              {/* Variable input depending on mode */}
-              {mode === 'por_fecha' ? (
+              {/* Mode-specific inputs */}
+              {mode === 'por_fecha' && (
                 <div className="flex flex-col gap-1.5">
                   <label className="text-xs font-medium text-foreground-muted">Fecha meta</label>
                   <input type="date" value={targetDate} onChange={e => setTargetDate(e.target.value)} required className="input" min={formatDateInput(new Date())} />
                 </div>
-              ) : (
+              )}
+
+              {mode === 'por_aporte' && (
                 <div className="flex flex-col gap-1.5">
                   <label className="text-xs font-medium text-foreground-muted">Aporte mensual ($)</label>
                   <input value={monthlyInput} onChange={e => setMonthlyInput(e.target.value)} required placeholder="Ej: 500.000" className="input" />
                 </div>
               )}
 
-              {/* Auto-calculated preview */}
+              {mode === 'por_etapas' && (
+                <div className="flex flex-col gap-3">
+                  <label className="text-xs font-medium text-foreground-muted">Etapas de ahorro</label>
+                  {stages.map((s, i) => (
+                    <div key={i} className="flex items-center gap-2">
+                      <span className="text-xs text-foreground-muted w-16 shrink-0">Etapa {i + 1}</span>
+                      <input
+                        type="number"
+                        min={1}
+                        value={s.months || ''}
+                        onChange={e => updateStage(i, 'months', e.target.value)}
+                        placeholder="Meses"
+                        className="input w-24 text-center"
+                      />
+                      <span className="text-xs text-foreground-muted shrink-0">meses a</span>
+                      <input
+                        value={s.amount || ''}
+                        onChange={e => updateStage(i, 'amount', e.target.value)}
+                        placeholder="$0/mes"
+                        className="input flex-1"
+                      />
+                      {stages.length > 1 && (
+                        <button type="button" onClick={() => setStages(p => p.filter((_, idx) => idx !== i))} className="text-foreground-subtle hover:text-danger">
+                          <X className="h-4 w-4" />
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                  <button
+                    type="button"
+                    onClick={() => setStages(p => [...p, { months: 3, amount: 0 }])}
+                    className="text-xs text-brand-600 hover:text-brand-700 text-left flex items-center gap-1"
+                  >
+                    <Plus className="h-3 w-3" /> Agregar etapa
+                  </button>
+                </div>
+              )}
+
+              {/* Preview */}
               {calc && (
-                <div className="rounded-[var(--radius-md)] bg-brand-50 border border-brand-200 p-3 text-xs">
-                  {mode === 'por_fecha' ? (
+                <div className="rounded-[var(--radius-md)] bg-brand-50 border border-brand-200 p-3 text-xs space-y-1">
+                  {mode === 'por_fecha' && (
                     <p className="text-brand-700">
                       Necesitas ahorrar <span className="font-bold">{formatCLP(calc.monthly)}/mes</span> durante {calc.months} {calc.months === 1 ? 'mes' : 'meses'} para alcanzar tu meta.
                     </p>
-                  ) : (
+                  )}
+                  {mode === 'por_aporte' && (
                     <p className="text-brand-700">
                       Aportando <span className="font-bold">{formatCLP(calc.monthly)}/mes</span> llegarás a tu meta en <span className="font-bold">{formatMonthYear(new Date(calc.targetDate))}</span> ({calc.months} {calc.months === 1 ? 'mes' : 'meses'}).
                     </p>
                   )}
+                  {mode === 'por_etapas' && 'accumulated' in calc && (
+                    <>
+                      {'reachDate' in calc && calc.reachDate ? (
+                        <p className="text-brand-700 font-semibold">
+                          ✅ Alcanzas tu meta en <span className="font-bold">{formatMonthYear(calc.reachDate)}</span> ({calc.months} meses).
+                        </p>
+                      ) : (
+                        <p className="text-danger font-semibold">
+                          ⚠️ Con estas etapas acumulas {formatCLP(calc.accumulated ?? 0)} — faltan {formatCLP(Math.max(0, (calc.targetAmt ?? 0) - (calc.accumulated ?? 0)))} para la meta.
+                        </p>
+                      )}
+                      <div className="mt-1 space-y-0.5">
+                        {calc.stages!.map((s, i) => (
+                          <p key={i} className="text-brand-600">Etapa {i + 1}: {s.months} meses × {formatCLP(s.amount)} = {formatCLP(s.months * s.amount)}</p>
+                        ))}
+                      </div>
+                    </>
+                  )}
                 </div>
               )}
 
-              {/* Optional start date */}
+              {/* Start date */}
               <div className="flex flex-col gap-1.5">
                 <label className="text-xs font-medium text-foreground-muted">Fecha de inicio (opcional)</label>
                 <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} className="input" />
-                <p className="text-[10px] text-foreground-muted">Déjalo vacío si empieza hoy. Útil para objetivos futuros.</p>
+                <p className="text-[10px] text-foreground-muted">Déjalo vacío si empieza hoy.</p>
               </div>
 
-              {saveError && (
-                <p className="text-xs text-danger">{saveError}</p>
-              )}
+              {saveError && <p className="text-xs text-danger">{saveError}</p>}
               <div className="flex gap-2 justify-end">
                 <Button type="button" variant="ghost" size="sm" onClick={resetForm}>Cancelar</Button>
                 <Button type="submit" size="sm" disabled={loading || !calc}>{loading ? 'Guardando...' : 'Guardar'}</Button>
