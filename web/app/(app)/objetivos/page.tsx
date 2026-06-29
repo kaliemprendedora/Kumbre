@@ -16,8 +16,8 @@ export default async function ObjetivosPage() {
   return (
     <div className="flex flex-col gap-6 animate-slide-up">
       {/* Header stats */}
-      <div className="flex items-start justify-between gap-4">
-        <div className="grid grid-cols-3 gap-4 flex-1">
+      <div className="flex flex-col sm:flex-row items-start justify-between gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 flex-1">
           <div className="rounded-[var(--radius-lg)] bg-surface-raised border border-border p-4">
             <p className="text-xs text-foreground-muted mb-1">Total necesario</p>
             <p className="text-lg font-bold text-foreground">{formatCurrency(goals.totalRequired, 'CLP')}</p>

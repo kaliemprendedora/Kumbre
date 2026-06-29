@@ -16,7 +16,7 @@ export default async function PatrimonioPage() {
   return (
     <div className="flex flex-col gap-6 animate-slide-up">
       {/* Summary */}
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <Card>
           <CardContent className="p-5">
             <p className="text-xs font-medium text-foreground-muted mb-2">Activos totales</p>
@@ -164,7 +164,7 @@ export default async function PatrimonioPage() {
               {formatCurrency(netWorth.liquidAssets, 'CLP')} disponibles
             </Badge>
           </div>
-          <div className="grid grid-cols-3 gap-4 text-center">
+          <div className="grid grid-cols-3 gap-2 sm:gap-4 text-center">
             {[1, 3, 6].map((months) => {
               const monthlyExpense = cashflow.expenses || 1_175_000
               const needed = monthlyExpense * months

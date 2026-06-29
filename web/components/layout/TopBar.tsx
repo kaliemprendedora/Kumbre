@@ -1,9 +1,10 @@
 'use client'
 
 import { usePathname, useRouter } from 'next/navigation'
-import { Bell, LogOut } from 'lucide-react'
+import { Bell, LogOut, Menu } from 'lucide-react'
 import { Button } from '@/components/ui'
 import { createClient } from '@/lib/supabase/client'
+import { useEffect, useState } from 'react'
 
 const pageTitles: Record<string, string> = {
   '/dashboard': 'Inicio',
@@ -11,18 +12,27 @@ const pageTitles: Record<string, string> = {
   '/objetivos': 'Objetivos',
   '/simulador': 'Simulador',
   '/patrimonio': 'Patrimonio',
-  '/empresa': 'Empresa',
+  '/proyeccion': 'Proyección',
+  '/perfil': 'Mi Perfil',
   '/configuracion': 'Configuración',
 }
 
-export function TopBar({ userName }: { userName?: string }) {
+export function TopBar({ onMenuClick }: { onMenuClick?: () => void }) {
   const pathname = usePathname()
   const router = useRouter()
-  const title = pageTitles[pathname] ?? 'Kumbre'
+  const [firstName, setFirstName] = useState('')
+
+  const title = Object.entries(pageTitles).find(([key]) => pathname === key || pathname.startsWith(key + '/'))?.[1] ?? 'Kumbre'
 
   const hour = new Date().getHours()
   const greeting = hour < 12 ? 'Buenos días' : hour < 19 ? 'Buenas tardes' : 'Buenas noches'
-  const firstName = userName?.split(' ')[0] ?? ''
+
+  useEffect(() => {
+    createClient().auth.getUser().then(({ data: { user } }) => {
+      const name = user?.user_metadata?.name ?? user?.email ?? ''
+      setFirstName(name.split(' ')[0])
+    })
+  }, [])
 
   async function handleLogout() {
     const supabase = createClient()
@@ -32,14 +42,24 @@ export function TopBar({ userName }: { userName?: string }) {
   }
 
   return (
-    <header className="flex h-14 items-center justify-between border-b border-border bg-surface px-6 shrink-0">
-      <div>
-        <h1 className="text-sm font-semibold text-foreground">{title}</h1>
-        {pathname === '/dashboard' && firstName && (
-          <p className="text-xs text-foreground-muted">
-            {greeting}, {firstName}
-          </p>
-        )}
+    <header className="flex h-14 items-center justify-between border-b border-border bg-surface px-4 lg:px-6 shrink-0">
+      <div className="flex items-center gap-3">
+        {/* Hamburger — mobile only */}
+        <button
+          onClick={onMenuClick}
+          className="lg:hidden text-foreground-muted hover:text-foreground p-1 -ml-1"
+          aria-label="Abrir menú"
+        >
+          <Menu className="h-5 w-5" />
+        </button>
+        <div>
+          <h1 className="text-sm font-semibold text-foreground">{title}</h1>
+          {pathname === '/dashboard' && firstName && (
+            <p className="text-xs text-foreground-muted">
+              {greeting}, {firstName}
+            </p>
+          )}
+        </div>
       </div>
       <div className="flex items-center gap-2">
         <Button variant="ghost" size="icon" aria-label="Notificaciones">

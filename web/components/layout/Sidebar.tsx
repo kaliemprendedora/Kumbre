@@ -13,6 +13,7 @@ import {
   ChevronDown,
   Mountain,
   UserCircle,
+  X,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { mockUniverses } from '@/data/mock'
@@ -40,21 +41,31 @@ const iconMap = {
   UserCircle,
 }
 
-export function Sidebar() {
+interface SidebarProps {
+  open?: boolean
+  onClose?: () => void
+}
+
+export function Sidebar({ open, onClose }: SidebarProps) {
   const pathname = usePathname()
   const activeUniverse = mockUniverses[0]
 
-  return (
+  const inner = (
     <aside className="flex h-full w-[var(--sidebar-width)] flex-col border-r border-border bg-surface shrink-0">
-      {/* Logo */}
-      <div className="flex items-center gap-2.5 px-5 py-5">
-        <div className="flex h-7 w-7 items-center justify-center rounded-[var(--radius-md)] bg-brand-600">
-          <Mountain className="h-4 w-4 text-white" />
+      <div className="flex items-center justify-between px-5 py-5">
+        <div className="flex items-center gap-2.5">
+          <div className="flex h-7 w-7 items-center justify-center rounded-[var(--radius-md)] bg-brand-600">
+            <Mountain className="h-4 w-4 text-white" />
+          </div>
+          <span className="text-sm font-semibold tracking-tight text-foreground">Kumbre</span>
         </div>
-        <span className="text-sm font-semibold tracking-tight text-foreground">Kumbre</span>
+        {onClose && (
+          <button onClick={onClose} className="lg:hidden text-foreground-muted hover:text-foreground p-1">
+            <X className="h-5 w-5" />
+          </button>
+        )}
       </div>
 
-      {/* Universe switcher */}
       <div className="mx-3 mb-4">
         <button className="flex w-full items-center justify-between gap-2 rounded-[var(--radius-md)] px-3 py-2 text-left transition-colors hover:bg-border-subtle">
           <div className="flex items-center gap-2.5">
@@ -70,7 +81,6 @@ export function Sidebar() {
         </button>
       </div>
 
-      {/* Nav */}
       <nav className="flex flex-1 flex-col gap-0.5 px-3 overflow-y-auto">
         {navItems.map((item) => {
           const Icon = iconMap[item.icon as keyof typeof iconMap] ?? LayoutDashboard
@@ -80,6 +90,7 @@ export function Sidebar() {
             <Link
               key={item.href}
               href={item.href}
+              onClick={onClose}
               className={cn(
                 'flex items-center gap-3 rounded-[var(--radius-md)] px-3 py-2 text-sm transition-colors duration-[120ms]',
                 active
@@ -94,10 +105,10 @@ export function Sidebar() {
         })}
       </nav>
 
-      {/* Bottom — settings + user */}
       <div className="border-t border-border px-3 py-3">
         <Link
           href="/configuracion"
+          onClick={onClose}
           className={cn(
             'flex items-center gap-3 rounded-[var(--radius-md)] px-3 py-2 text-sm transition-colors',
             pathname === '/configuracion'
@@ -109,7 +120,7 @@ export function Sidebar() {
           Configuración
         </Link>
 
-        <Link href="/perfil" className="mt-2 flex items-center gap-2.5 rounded-[var(--radius-md)] px-3 py-2 hover:bg-border-subtle transition-colors">
+        <Link href="/perfil" onClick={onClose} className="mt-2 flex items-center gap-2.5 rounded-[var(--radius-md)] px-3 py-2 hover:bg-border-subtle transition-colors">
           <div className="flex h-7 w-7 items-center justify-center rounded-full bg-brand-100 text-brand-700 text-xs font-semibold shrink-0">
             K
           </div>
@@ -119,5 +130,32 @@ export function Sidebar() {
         </Link>
       </div>
     </aside>
+  )
+
+  return (
+    <>
+      {/* Desktop */}
+      <div className="hidden lg:flex h-full">
+        {inner}
+      </div>
+
+      {/* Mobile backdrop */}
+      <div
+        className={cn(
+          'fixed inset-0 z-40 bg-black/50 lg:hidden transition-opacity duration-200',
+          open ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
+        )}
+        onClick={onClose}
+      />
+      {/* Mobile drawer */}
+      <div
+        className={cn(
+          'fixed inset-y-0 left-0 z-50 lg:hidden transition-transform duration-200',
+          open ? 'translate-x-0' : '-translate-x-full'
+        )}
+      >
+        {inner}
+      </div>
+    </>
   )
 }
