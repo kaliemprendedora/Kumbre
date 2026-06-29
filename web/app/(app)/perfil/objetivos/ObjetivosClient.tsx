@@ -39,6 +39,8 @@ export function ObjetivosClient({ initial }: { initial: Objetivo[] }) {
   const [objetivos, setObjetivos] = useState(initial)
   const [showing, setShowing] = useState(false)
   const [loading, setLoading] = useState(false)
+  const [saveError, setSaveError] = useState('')
+  const [successMsg, setSuccessMsg] = useState('')
   const [editing, setEditing] = useState<string | null>(null)
   const [editForm, setEditForm] = useState<Partial<Objetivo>>({})
 
@@ -78,19 +80,28 @@ export function ObjetivosClient({ initial }: { initial: Objetivo[] }) {
     return null
   }, [target, current, mode, targetDate, monthlyInput])
 
+  const motivaciones = [
+    '¡Vas a lograrlo! Cada peso cuenta. 💪',
+    '¡Objetivo creado! El primer paso ya está dado. 🚀',
+    '¡Excelente! Tus metas merecen un plan. ⭐',
+    '¡Perfecto! Ya estás un paso más cerca. 🎯',
+    '¡Bien hecho! La constancia mueve montañas. 🏔️',
+  ]
+
   function resetForm() {
     setName(''); setKind(''); setTarget(''); setCurrent('')
     setTargetDate(''); setMonthlyInput(''); setMode('por_fecha')
-    setShowing(false)
+    setSaveError(''); setShowing(false)
   }
 
   async function handleAdd(e: React.FormEvent) {
     e.preventDefault()
     if (!calc) return
     setLoading(true)
+    setSaveError('')
     const supabase = createClient()
     const { data: { user } } = await supabase.auth.getUser()
-    const { data } = await supabase.from('objectives').insert({
+    const { data, error } = await supabase.from('objectives').insert({
       user_id: user!.id,
       name, kind,
       target_amount: parse(target),
@@ -99,9 +110,17 @@ export function ObjetivosClient({ initial }: { initial: Objetivo[] }) {
       target_date: calc.targetDate,
       start_date: null,
     }).select().single()
-    if (data) { setObjetivos(p => [...p, data]); resetForm() }
+    if (error) {
+      setSaveError('No se pudo guardar: ' + error.message)
+    } else if (data) {
+      setObjetivos(p => [...p, data])
+      const msg = motivaciones[Math.floor(Math.random() * motivaciones.length)]
+      setSuccessMsg(msg)
+      setTimeout(() => setSuccessMsg(''), 4000)
+      resetForm()
+      router.refresh()
+    }
     setLoading(false)
-    router.refresh()
   }
 
   async function handleEdit(id: string) {
@@ -135,6 +154,12 @@ export function ObjetivosClient({ initial }: { initial: Objetivo[] }) {
         </div>
         <Button size="sm" onClick={() => setShowing(true)}><Plus className="h-4 w-4 mr-1" />Agregar</Button>
       </div>
+
+      {successMsg && (
+        <div className="rounded-[var(--radius-lg)] bg-success-bg border border-success/30 px-4 py-3 text-sm font-medium text-success animate-slide-up">
+          {successMsg}
+        </div>
+      )}
 
       {showing && (
         <Card>
@@ -228,6 +253,9 @@ export function ObjetivosClient({ initial }: { initial: Objetivo[] }) {
                 </div>
               )}
 
+              {saveError && (
+                <p className="text-xs text-danger">{saveError}</p>
+              )}
               <div className="flex gap-2 justify-end">
                 <Button type="button" variant="ghost" size="sm" onClick={resetForm}>Cancelar</Button>
                 <Button type="submit" size="sm" disabled={loading || !calc}>{loading ? 'Guardando...' : 'Guardar'}</Button>
