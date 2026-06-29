@@ -29,7 +29,7 @@ export function StatCard({ label, value, trend, trendLabel, icon, className, acc
         <div className="flex items-start justify-between gap-4">
           <div className="flex flex-col gap-2 min-w-0">
             <span className="text-xs font-medium text-foreground-muted uppercase tracking-wide">{label}</span>
-            <span className="text-2xl font-bold text-foreground tracking-tight leading-none">{value}</span>
+            <span className="text-xl sm:text-2xl font-bold text-foreground tracking-tight leading-none break-all">{value}</span>
             {trend !== undefined && (
               <div className={cn('flex items-center gap-1 text-xs font-medium', trendColor)}>
                 <TrendIcon className="h-3 w-3 shrink-0" />

@@ -44,7 +44,7 @@ export default async function DashboardPage() {
             <p className="text-sm font-semibold text-brand-700">Completa tu perfil para ver tu situación real</p>
           </div>
           <p className="text-xs text-brand-600 mb-4">Ahora mismo estás viendo datos de ejemplo. Sigue estos pasos para personalizar la app:</p>
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
             {[
               { href: '/perfil/cuentas', label: '1. Tus cuentas', desc: 'Banco, ahorro, inversiones' },
               { href: '/perfil/transacciones', label: '2. Ingresos y gastos', desc: 'Sueldo, arriendo, servicios' },
@@ -61,14 +61,14 @@ export default async function DashboardPage() {
       )}
 
       {/* Net worth banner */}
-      <div className="rounded-[var(--radius-xl)] bg-gradient-to-br from-brand-600 to-brand-800 p-6 text-white shadow-[var(--shadow-lg)]">
-        <div className="flex items-start justify-between">
+      <div className="rounded-[var(--radius-xl)] bg-gradient-to-br from-brand-600 to-brand-800 p-5 sm:p-6 text-white shadow-[var(--shadow-lg)]">
+        <div className="flex items-start justify-between gap-4">
           <div>
             <p className="text-sm font-medium text-brand-200 mb-1">Patrimonio neto</p>
-            <p className="text-4xl font-bold tracking-tight mb-3">
+            <p className="text-2xl sm:text-4xl font-bold tracking-tight mb-3 break-all">
               {formatCurrency(netWorth.netWorth, 'CLP')}
             </p>
-            <div className="flex items-center gap-4 text-sm">
+            <div className="flex flex-wrap items-center gap-2 text-sm">
               <span className="text-brand-200">
                 Activos {formatCurrency(netWorth.totalAssets, 'CLP')}
               </span>
@@ -83,7 +83,7 @@ export default async function DashboardPage() {
       </div>
 
       {/* Stat cards */}
-      <div className="grid grid-cols-2 gap-4 xl:grid-cols-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
         <StatCard
           label="Ingresos del mes"
           value={formatCurrency(cashflow.income, 'CLP')}
