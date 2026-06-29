@@ -104,9 +104,9 @@ export function ProyeccionClient({ txs, cuentas }: { txs: Tx[]; cuentas: Cuenta[
   const totalNet = totalIncome - totalExpense
   const finalBalance = data[data.length - 1]?.Patrimonio ?? initialBalance
 
-  // Only show ~4 labels max on the X-axis regardless of horizon
   const totalMonths = horizon * 12
-  const tickInterval = Math.max(1, Math.ceil(totalMonths / 4) - 1)
+  // Show quarterly ticks (every 3 months) — explicit list overrides recharts auto-hide
+  const quarterlyTicks = data.filter((_, i) => i % 3 === 0).map(d => d.label)
 
   return (
     <div className="flex flex-col gap-6 animate-slide-up">
@@ -186,7 +186,7 @@ export function ProyeccionClient({ txs, cuentas }: { txs: Tx[]; cuentas: Cuenta[
                 {chartType === 'flujo' ? (
                   <BarChart data={data} margin={{ top: 4, right: 12, left: -16, bottom: 20 }} barSize={14}>
                     <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
-                    <XAxis dataKey="label" tick={{ fontSize: 10, fill: 'var(--foreground-muted)' }} axisLine={false} tickLine={false} interval={0} angle={-35} textAnchor="end" height={44} />
+                    <XAxis dataKey="label" ticks={quarterlyTicks} tick={{ fontSize: 10, fill: 'var(--foreground-muted)' }} axisLine={false} tickLine={false} angle={-35} textAnchor="end" height={44} />
                     <YAxis tick={{ fontSize: 10, fill: 'var(--foreground-muted)' }} axisLine={false} tickLine={false} tickFormatter={v => `$${(v / 1_000_000).toFixed(1)}M`} width={52} />
                     <Tooltip content={<CustomTooltip />} />
                     <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: 11, paddingTop: 8 }} />
@@ -198,7 +198,7 @@ export function ProyeccionClient({ txs, cuentas }: { txs: Tx[]; cuentas: Cuenta[
                 ) : (
                   <BarChart data={data} margin={{ top: 4, right: 12, left: -16, bottom: 20 }} barSize={20}>
                     <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
-                    <XAxis dataKey="label" tick={{ fontSize: 10, fill: 'var(--foreground-muted)' }} axisLine={false} tickLine={false} interval={0} angle={-35} textAnchor="end" height={44} />
+                    <XAxis dataKey="label" ticks={quarterlyTicks} tick={{ fontSize: 10, fill: 'var(--foreground-muted)' }} axisLine={false} tickLine={false} angle={-35} textAnchor="end" height={44} />
                     <YAxis tick={{ fontSize: 10, fill: 'var(--foreground-muted)' }} axisLine={false} tickLine={false} tickFormatter={v => `$${(v / 1_000_000).toFixed(1)}M`} width={52} />
                     <Tooltip content={<CustomTooltip />} />
                     <ReferenceLine y={0} stroke="var(--border)" />
