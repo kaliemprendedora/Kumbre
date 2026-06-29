@@ -104,8 +104,9 @@ export function ProyeccionClient({ txs, cuentas }: { txs: Tx[]; cuentas: Cuenta[
   const totalNet = totalIncome - totalExpense
   const finalBalance = data[data.length - 1]?.Patrimonio ?? initialBalance
 
-  // Show fewer X-axis ticks so labels don't overlap on mobile
-  const tickInterval = horizon <= 1 ? 1 : horizon <= 2 ? 2 : horizon <= 3 ? 3 : horizon <= 5 ? 5 : 11
+  // Only show ~4 labels max on the X-axis regardless of horizon
+  const totalMonths = horizon * 12
+  const tickInterval = Math.max(1, Math.ceil(totalMonths / 4) - 1)
 
   return (
     <div className="flex flex-col gap-6 animate-slide-up">
@@ -182,7 +183,7 @@ export function ProyeccionClient({ txs, cuentas }: { txs: Tx[]; cuentas: Cuenta[
             {chartType === 'flujo' ? (
               <BarChart data={data} margin={{ top: 4, right: 4, left: -16, bottom: 0 }} barSize={horizon <= 2 ? 8 : 4}>
                 <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
-                <XAxis dataKey="label" tick={{ fontSize: 10, fill: 'var(--foreground-muted)' }} axisLine={false} tickLine={false} interval={tickInterval} />
+                <XAxis dataKey="label" tick={{ fontSize: 10, fill: 'var(--foreground-muted)' }} axisLine={false} tickLine={false} interval={tickInterval} angle={-35} textAnchor="end" height={40} />
                 <YAxis tick={{ fontSize: 10, fill: 'var(--foreground-muted)' }} axisLine={false} tickLine={false} tickFormatter={v => `$${(v / 1_000_000).toFixed(1)}M`} />
                 <Tooltip content={<CustomTooltip />} />
                 <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: 11, paddingTop: 12 }} />
@@ -194,7 +195,7 @@ export function ProyeccionClient({ txs, cuentas }: { txs: Tx[]; cuentas: Cuenta[
             ) : (
               <BarChart data={data} margin={{ top: 4, right: 4, left: -16, bottom: 0 }} barSize={horizon <= 2 ? 8 : 4}>
                 <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
-                <XAxis dataKey="label" tick={{ fontSize: 10, fill: 'var(--foreground-muted)' }} axisLine={false} tickLine={false} interval={tickInterval} />
+                <XAxis dataKey="label" tick={{ fontSize: 10, fill: 'var(--foreground-muted)' }} axisLine={false} tickLine={false} interval={tickInterval} angle={-35} textAnchor="end" height={40} />
                 <YAxis tick={{ fontSize: 10, fill: 'var(--foreground-muted)' }} axisLine={false} tickLine={false} tickFormatter={v => `$${(v / 1_000_000).toFixed(1)}M`} />
                 <Tooltip content={<CustomTooltip />} />
                 <ReferenceLine y={0} stroke="var(--border)" />
@@ -210,8 +211,8 @@ export function ProyeccionClient({ txs, cuentas }: { txs: Tx[]; cuentas: Cuenta[
         <Card>
           <CardHeader><CardTitle>Detalle mensual</CardTitle></CardHeader>
           <CardContent className="p-0 pb-2">
-            <div className="overflow-x-auto">
-              <table className="w-full text-xs min-w-[400px]">
+            <div className="overflow-x-auto -webkit-overflow-scrolling-touch">
+              <table className="text-xs w-max min-w-full">
                 <thead>
                   <tr className="border-b border-border">
                     <th className="text-left px-3 py-3 text-foreground-muted font-medium whitespace-nowrap">Mes</th>
