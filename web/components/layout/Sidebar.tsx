@@ -23,8 +23,9 @@ const navItems: NavItem[] = [
   { label: 'Inicio', href: '/dashboard', icon: 'LayoutDashboard' },
   { label: 'Movimientos', href: '/movimientos', icon: 'ArrowLeftRight' },
   { label: 'Objetivos', href: '/objetivos', icon: 'Target' },
-  { label: 'Simulador', href: '/simulador', icon: 'TrendingUp' },
+  { label: 'Proyección', href: '/proyeccion', icon: 'TrendingUp' },
   { label: 'Patrimonio', href: '/patrimonio', icon: 'BarChart3' },
+  { label: 'Simulador', href: '/simulador', icon: 'Briefcase' },
   { label: 'Mi Perfil', href: '/perfil', icon: 'UserCircle' },
 ]
 

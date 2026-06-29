@@ -8,14 +8,14 @@ import { Button } from '@/components/ui/Button'
 import { Card, CardContent } from '@/components/ui/Card'
 import { formatCLP } from '@/lib/format'
 
-type Tx = { id: string; description: string; amount: number; kind: string; is_recurring: boolean; account_id: string }
+type Tx = { id: string; description: string; amount: number; kind: string; is_recurring: boolean; account_id: string; is_business: boolean }
 type Cuenta = { id: string; name: string }
 
 export function TransaccionesClient({ initial, cuentas }: { initial: Tx[]; cuentas: Cuenta[] }) {
   const router = useRouter()
   const [txs, setTxs] = useState(initial)
   const [showing, setShowing] = useState(false)
-  const [form, setForm] = useState({ description: '', amount: '', kind: 'income', is_recurring: true, account_id: cuentas[0]?.id ?? '' })
+  const [form, setForm] = useState({ description: '', amount: '', kind: 'income', is_recurring: true, account_id: cuentas[0]?.id ?? '', is_business: false })
   const [loading, setLoading] = useState(false)
   const [editing, setEditing] = useState<string | null>(null)
   const [editForm, setEditForm] = useState<Partial<Tx>>({})
@@ -47,6 +47,7 @@ export function TransaccionesClient({ initial, cuentas }: { initial: Tx[]; cuent
       kind: form.kind,
       is_recurring: form.is_recurring,
       account_id: form.account_id,
+      is_business: form.is_business,
       date: new Date().toISOString().split('T')[0],
     }).select().single()
     if (data) { setTxs(p => [...p, data]); setShowing(false) }
@@ -112,6 +113,13 @@ export function TransaccionesClient({ initial, cuentas }: { initial: Tx[]; cuent
                   <select value={form.is_recurring ? 'si' : 'no'} onChange={e => setForm(p => ({ ...p, is_recurring: e.target.value === 'si' }))} className="input">
                     <option value="si">Sí (mensual)</option>
                     <option value="no">No (único)</option>
+                  </select>
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-xs font-medium text-foreground-muted">¿Es del negocio?</label>
+                  <select value={form.is_business ? 'si' : 'no'} onChange={e => setForm(p => ({ ...p, is_business: e.target.value === 'si' }))} className="input">
+                    <option value="no">No (personal)</option>
+                    <option value="si">Sí (negocio)</option>
                   </select>
                 </div>
               </div>

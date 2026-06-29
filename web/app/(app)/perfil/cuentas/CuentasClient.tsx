@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/Button'
 import { Card, CardContent } from '@/components/ui/Card'
 import { formatCLP } from '@/lib/format'
 
-type Cuenta = { id: string; name: string; kind: string; balance: number; is_liquid: boolean }
+type Cuenta = { id: string; name: string; kind: string; balance: number; is_liquid: boolean; is_business: boolean }
 
 const kindLabels: Record<string, string> = {
   checking: 'Cuenta corriente', savings: 'Ahorro', investment: 'Inversión',
@@ -19,7 +19,7 @@ export function CuentasClient({ initial }: { initial: Cuenta[] }) {
   const router = useRouter()
   const [cuentas, setCuentas] = useState(initial)
   const [showing, setShowing] = useState(false)
-  const [form, setForm] = useState({ name: '', kind: 'checking', balance: '0', is_liquid: true })
+  const [form, setForm] = useState({ name: '', kind: 'checking', balance: '0', is_liquid: true, is_business: false })
   const [loading, setLoading] = useState(false)
   const [editing, setEditing] = useState<string | null>(null)
   const [editForm, setEditForm] = useState<Partial<Cuenta>>({})
@@ -50,8 +50,9 @@ export function CuentasClient({ initial }: { initial: Cuenta[] }) {
       name: form.name, kind: form.kind,
       balance: Math.round(Number(form.balance)),
       is_liquid: form.is_liquid,
+      is_business: form.is_business,
     }).select().single()
-    if (data) { setCuentas(p => [...p, data]); setShowing(false); setForm({ name: '', kind: 'checking', balance: '0', is_liquid: true }) }
+    if (data) { setCuentas(p => [...p, data]); setShowing(false); setForm({ name: '', kind: 'checking', balance: '0', is_liquid: true, is_business: false }) }
     setLoading(false)
     router.refresh()
   }
@@ -102,6 +103,13 @@ export function CuentasClient({ initial }: { initial: Cuenta[] }) {
                   <select value={form.is_liquid ? 'si' : 'no'} onChange={e => setForm(p => ({ ...p, is_liquid: e.target.value === 'si' }))} className="input">
                     <option value="si">Sí (disponible)</option>
                     <option value="no">No (bloqueada)</option>
+                  </select>
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-xs font-medium text-foreground-muted">¿Es del negocio?</label>
+                  <select value={form.is_business ? 'si' : 'no'} onChange={e => setForm(p => ({ ...p, is_business: e.target.value === 'si' }))} className="input">
+                    <option value="no">No (personal)</option>
+                    <option value="si">Sí (negocio)</option>
                   </select>
                 </div>
               </div>
@@ -157,7 +165,7 @@ export function CuentasClient({ initial }: { initial: Cuenta[] }) {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-foreground">{c.name}</p>
-                  <p className="text-xs text-foreground-muted">{kindLabels[c.kind]} · {c.is_liquid ? 'Líquida' : 'No líquida'}</p>
+                  <p className="text-xs text-foreground-muted">{kindLabels[c.kind]} · {c.is_liquid ? 'Líquida' : 'No líquida'}{c.is_business ? ' · Negocio' : ''}</p>
                 </div>
                 <div className="flex items-center gap-3">
                   <p className={`text-sm font-semibold ${c.balance < 0 ? 'text-danger' : 'text-foreground'}`}>{formatCLP(c.balance)}</p>
