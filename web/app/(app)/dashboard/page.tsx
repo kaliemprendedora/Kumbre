@@ -9,7 +9,7 @@ import { RecentTransactions } from '@/components/dashboard/RecentTransactions'
 import { UpcomingEvents } from '@/components/dashboard/UpcomingEvents'
 import { GoalCard } from '@/components/dashboard/GoalCard'
 import { HealthScoreRing } from '@/components/dashboard/HealthScoreRing'
-import { mockCategories, mockTransactions, mockAccounts, mockUpcomingEvents } from '@/data/mock'
+import { mockCategories, mockTransactions } from '@/data/mock'
 import { getAnalysisForUser } from '@/lib/kumbre'
 import { formatCurrency, formatPercent } from '@/lib/utils'
 
@@ -23,14 +23,16 @@ export default async function DashboardPage() {
     ? [...mockTransactions].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).slice(0, 5)
     : []
 
-  const chartData = [
-    { month: '2026-01-01', income: 3_500_000, expenses: 2_300_000, savings: 1_200_000 },
-    { month: '2026-02-01', income: 3_100_000, expenses: 2_450_000, savings: 650_000 },
-    { month: '2026-03-01', income: 3_800_000, expenses: 2_200_000, savings: 1_600_000 },
-    { month: '2026-04-01', income: 4_100_000, expenses: 2_600_000, savings: 1_500_000 },
-    { month: '2026-05-01', income: 3_700_000, expenses: 2_400_000, savings: 1_300_000 },
-    { month: '2026-06-01', income: cashflow.income, expenses: cashflow.expenses, savings: cashflow.net },
-  ]
+  const chartData = isDemo
+    ? [
+        { month: '2026-01-01', income: 3_500_000, expenses: 2_300_000, savings: 1_200_000 },
+        { month: '2026-02-01', income: 3_100_000, expenses: 2_450_000, savings: 650_000 },
+        { month: '2026-03-01', income: 3_800_000, expenses: 2_200_000, savings: 1_600_000 },
+        { month: '2026-04-01', income: 4_100_000, expenses: 2_600_000, savings: 1_500_000 },
+        { month: '2026-05-01', income: 3_700_000, expenses: 2_400_000, savings: 1_300_000 },
+        { month: '2026-06-01', income: cashflow.income, expenses: cashflow.expenses, savings: cashflow.net },
+      ]
+    : [{ month: new Date().toISOString().slice(0, 7) + '-01', income: cashflow.income, expenses: cashflow.expenses, savings: cashflow.net }]
 
   const savingsPct = Math.round(cashflow.savingsRate * 100)
 
@@ -152,7 +154,7 @@ export default async function DashboardPage() {
             </Card>
           )}
 
-          <UpcomingEvents events={mockUpcomingEvents} />
+          <UpcomingEvents events={[]} />
 
           <div>
             <h2 className="text-xs font-semibold text-foreground-muted uppercase tracking-wide mb-3">
