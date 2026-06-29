@@ -61,10 +61,10 @@ export function ObjetivosClient({ initial }: { initial: Objetivo[] }) {
     const targetAmt = parse(target)
     const currentAmt = parse(current)
     const remaining = Math.max(0, targetAmt - currentAmt)
-    const today = new Date()
+    const from = startDate ? new Date(startDate) : new Date()
 
     if (mode === 'por_fecha' && targetDate) {
-      const months = monthsDiff(today, new Date(targetDate))
+      const months = monthsDiff(from, new Date(targetDate))
       if (months <= 0) return null
       const monthly = Math.ceil(remaining / months)
       return { monthly, targetDate, months }
@@ -74,13 +74,13 @@ export function ObjetivosClient({ initial }: { initial: Objetivo[] }) {
       const monthly = parse(monthlyInput)
       if (monthly <= 0) return null
       const months = Math.ceil(remaining / monthly)
-      if (months > 1200) return null // más de 100 años: no calculable
-      const date = addMonths(today, months)
+      if (months > 1200) return null
+      const date = addMonths(from, months)
       return { monthly, targetDate: formatDateInput(date), months }
     }
 
     return null
-  }, [target, current, mode, targetDate, monthlyInput])
+  }, [target, current, mode, targetDate, monthlyInput, startDate])
 
   const motivaciones = [
     '¡Vas a lograrlo! Cada peso cuenta. 💪',
