@@ -27,6 +27,11 @@ function addMonths(date: Date, months: number) {
   return d
 }
 
+function parseLocalDate(s: string) {
+  const [y, m, d] = s.split('-').map(Number)
+  return new Date(y!, (m! - 1), d!)
+}
+
 function formatDateInput(date: Date) {
   return date.toISOString().slice(0, 10)
 }
@@ -58,7 +63,7 @@ export function ObjetivosClient({ initial }: { initial: Objetivo[] }) {
   const parse = (v: string | number) =>
     typeof v === 'number' ? v : Math.max(0, Math.round(Number(String(v).replace(/\D/g, ''))))
 
-  const from = useMemo(() => startDate ? new Date(startDate) : new Date(), [startDate])
+  const from = useMemo(() => startDate ? parseLocalDate(startDate) : new Date(), [startDate])
 
   const calc = useMemo(() => {
     const targetAmt = parse(target)
@@ -66,7 +71,7 @@ export function ObjetivosClient({ initial }: { initial: Objetivo[] }) {
     const remaining = Math.max(0, targetAmt - currentAmt)
 
     if (mode === 'por_fecha' && targetDate) {
-      const months = monthsDiff(from, new Date(targetDate))
+      const months = monthsDiff(from, parseLocalDate(targetDate))
       if (months <= 0) return null
       const monthly = Math.ceil(remaining / months)
       return { monthly, targetDate, months, stages: null }
