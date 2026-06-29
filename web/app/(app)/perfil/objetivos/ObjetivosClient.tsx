@@ -74,6 +74,7 @@ export function ObjetivosClient({ initial }: { initial: Objetivo[] }) {
       const monthly = parse(monthlyInput)
       if (monthly <= 0) return null
       const months = Math.ceil(remaining / monthly)
+      if (months > 1200) return null // más de 100 años: no calculable
       const date = addMonths(today, months)
       return { monthly, targetDate: formatDateInput(date), months }
     }
