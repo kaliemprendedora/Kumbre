@@ -342,9 +342,9 @@ export function ObjetivosClient({ initial }: { initial: Objetivo[] }) {
                         </p>
                       )}
                       <div className="mt-1 space-y-0.5">
-                        {calc.stages!.map((s, i) => (
+                        {stages.map((s, i) => s.months > 0 && s.amount > 0 ? (
                           <p key={i} className="text-brand-600">Etapa {i + 1}: {s.months} meses × {formatCLP(s.amount)} = {formatCLP(s.months * s.amount)}</p>
-                        ))}
+                        ) : null)}
                       </div>
                     </>
                   )}
