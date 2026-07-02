@@ -56,9 +56,6 @@ function FormFields({
 
   const [showNewAcc, setShowNewAcc] = useState(false)
   const [newAccName, setNewAccName] = useState('')
-  const [newAccKind, setNewAccKind] = useState('corriente')
-  const [newAccBalance, setNewAccBalance] = useState('0')
-  const [newAccLiquid, setNewAccLiquid] = useState(true)
   const [newAccLoading, setNewAccLoading] = useState(false)
   const [extraCuentas, setExtraCuentas] = useState<Cuenta[]>([])
 
@@ -91,12 +88,11 @@ function FormFields({
     setNewAccLoading(true)
     const trimmed = newAccName.trim()
     try {
-      const newId = await onSaveNewAccount(trimmed, isBusiness, newAccKind, Number(newAccBalance) || 0, newAccLiquid)
+      const newId = await onSaveNewAccount(trimmed, isBusiness, 'otro', 0, true)
       if (newId) {
         setExtraCuentas(p => [...p, { id: newId, name: trimmed, is_business: isBusiness }])
         setF(p => ({ ...p, account_id: newId }))
         setNewAccName('')
-        setNewAccBalance('0')
         setShowNewAcc(false)
       }
     } catch (err) {
@@ -132,20 +128,7 @@ function FormFields({
         {showNewAcc ? (
           <div className="flex flex-col gap-2 p-3 bg-border-subtle rounded-[var(--radius-md)] mt-1">
             <p className="text-xs font-medium text-foreground-muted">Nueva cuenta</p>
-            <input value={newAccName} onChange={e => setNewAccName(e.target.value)} placeholder="Ej: Efectivo, Banco Chile" className="input" autoFocus />
-            <select value={newAccKind} onChange={e => setNewAccKind(e.target.value)} className="input">
-              <option value="corriente">Cuenta corriente</option>
-              <option value="ahorro">Cuenta ahorro</option>
-              <option value="efectivo">Efectivo</option>
-              <option value="credito">Crédito</option>
-              <option value="inversion">Inversión</option>
-              <option value="otro">Otro</option>
-            </select>
-            <input value={newAccBalance} onChange={e => setNewAccBalance(e.target.value)} placeholder="Saldo inicial (0)" className="input" inputMode="numeric" />
-            <label className="flex items-center gap-2 text-xs text-foreground-muted cursor-pointer">
-              <input type="checkbox" checked={newAccLiquid} onChange={e => setNewAccLiquid(e.target.checked)} />
-              Es líquida (disponible de inmediato)
-            </label>
+            <input value={newAccName} onChange={e => setNewAccName(e.target.value)} placeholder="Ej: Efectivo, Banco Chile" className="input" autoFocus onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), saveNewAcc())} />
             <div className="flex gap-2">
               <Button type="button" size="sm" onClick={saveNewAcc} disabled={newAccLoading || !newAccName.trim()}>
                 {newAccLoading ? 'Guardando…' : 'Guardar'}
