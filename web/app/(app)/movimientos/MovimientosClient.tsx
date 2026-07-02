@@ -35,6 +35,7 @@ function emptyForm(accountId: string): FormState {
   return { description: '', amount: '', kind: 'expense', is_recurring: false, account_id: accountId, date: localToday(), category_id: '' }
 }
 
+// FormFields has its own local state for inline creation forms — no focus loss
 function FormFields({
   f, setF, cuentas, categories, isBusiness,
   onSaveNewCat, onSaveNewAccount,
@@ -86,14 +87,19 @@ function FormFields({
     if (!newAccName.trim()) return
     setNewAccLoading(true)
     const trimmed = newAccName.trim()
-    const newId = await onSaveNewAccount(trimmed, isBusiness)
-    if (newId) {
-      setExtraCuentas(p => [...p, { id: newId, name: trimmed, is_business: isBusiness }])
-      setF(p => ({ ...p, account_id: newId }))
-      setNewAccName('')
-      setShowNewAcc(false)
+    try {
+      const newId = await onSaveNewAccount(trimmed, isBusiness)
+      if (newId) {
+        setExtraCuentas(p => [...p, { id: newId, name: trimmed, is_business: isBusiness }])
+        setF(p => ({ ...p, account_id: newId }))
+        setNewAccName('')
+        setShowNewAcc(false)
+      }
+    } catch (err) {
+      console.error('Error creando cuenta:', err)
+    } finally {
+      setNewAccLoading(false)
     }
-    setNewAccLoading(false)
   }
 
   return (
@@ -268,7 +274,6 @@ export function MovimientosClient({
   }
 
   function startEdit(tx: Tx) {
-    setShowing(false)
     setEditId(tx.id)
     setEditForm({
       description: tx.description,
@@ -316,9 +321,11 @@ export function MovimientosClient({
   async function handleNewAccount(name: string, business: boolean): Promise<string | null> {
     const supabase = createClient()
     const { data: { user } } = await supabase.auth.getUser()
-    const { data } = await supabase.from('accounts').insert({
-      user_id: user!.id, name, is_business: business,
+    if (!user) return null
+    const { data, error } = await supabase.from('accounts').insert({
+      user_id: user.id, name, is_business: business,
     }).select().single()
+    if (error) { console.error('Error insertando cuenta:', error); return null }
     if (data) {
       setAllCuentas(p => [...p, data])
       return data.id
