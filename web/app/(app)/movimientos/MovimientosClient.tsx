@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useMemo } from 'react'
-import { ArrowDownLeft, ArrowUpRight, Search, Plus, Trash2, Pencil, Check, X } from 'lucide-react'
+import { ArrowDownLeft, ArrowUpRight, Search, Plus, Trash2, Check, X } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { createClient } from '@/lib/supabase/client'
@@ -15,6 +15,10 @@ type Tx = {
 }
 type Cuenta = { id: string; name: string; is_business: boolean }
 type Category = { id: string; name: string; kind: string; parent_id: string | null }
+type FormState = {
+  description: string; amount: string; kind: string; is_recurring: boolean
+  account_id: string; date: string; category_id: string
+}
 
 function localToday() {
   const d = new Date()
@@ -27,10 +31,152 @@ function displayDate(s?: string | null) {
   return new Date(y!, m! - 1, d!).toLocaleDateString('es-CL', { day: 'numeric', month: 'long', year: 'numeric' })
 }
 
-const emptyForm = (accountId: string) => ({
-  description: '', amount: '', kind: 'expense', is_recurring: false,
-  account_id: accountId, date: localToday(), category_id: '',
-})
+function emptyForm(accountId: string): FormState {
+  return { description: '', amount: '', kind: 'expense', is_recurring: false, account_id: accountId, date: localToday(), category_id: '' }
+}
+
+function FormFields({
+  f, setF, forForm, cuentas, categories, isBusiness,
+  showNewCat, setShowNewCat, newCatName, setNewCatName, newCatKind, setNewCatKind,
+  newCatParent, setNewCatParent, newCatLoading, onSaveNewCat,
+  showNewAccount, setShowNewAccount, newAccName, setNewAccName, newAccLoading, onSaveNewAccount,
+}: {
+  f: FormState
+  setF: React.Dispatch<React.SetStateAction<FormState>>
+  forForm: 'add' | 'edit'
+  cuentas: Cuenta[]
+  categories: Category[]
+  isBusiness: boolean
+  showNewCat: 'add' | 'edit' | null
+  setShowNewCat: (v: 'add' | 'edit' | null) => void
+  newCatName: string
+  setNewCatName: (v: string) => void
+  newCatKind: string
+  setNewCatKind: (v: string) => void
+  newCatParent: string
+  setNewCatParent: (v: string) => void
+  newCatLoading: boolean
+  onSaveNewCat: (forForm: 'add' | 'edit') => void
+  showNewAccount: 'add' | 'edit' | null
+  setShowNewAccount: (v: 'add' | 'edit' | null) => void
+  newAccName: string
+  setNewAccName: (v: string) => void
+  newAccLoading: boolean
+  onSaveNewAccount: (forForm: 'add' | 'edit') => void
+}) {
+  const relevCuentas = cuentas.filter(c => c.is_business === isBusiness)
+  const parentCategories = categories.filter(c => !c.parent_id)
+  const parents = parentCategories.filter(c => c.kind === f.kind)
+  const catMap = new Map(categories.map(c => [c.id, c]))
+  const selectedCat = catMap.get(f.category_id)
+  const parentId = selectedCat?.parent_id
+    ? selectedCat.parent_id
+    : (selectedCat && !selectedCat.parent_id ? selectedCat.id : '')
+  const subs = parentId ? categories.filter(c => c.parent_id === parentId && c.kind === f.kind) : []
+
+  return (
+    <div className="grid grid-cols-2 gap-3">
+      <div className="flex flex-col gap-1.5 col-span-2">
+        <label className="text-xs font-medium text-foreground-muted">Descripción</label>
+        <input value={f.description} onChange={e => setF(p => ({ ...p, description: e.target.value }))} required placeholder="Ej: Sueldo, Supermercado" className="input" />
+      </div>
+      <div className="flex flex-col gap-1.5">
+        <label className="text-xs font-medium text-foreground-muted">Monto ($)</label>
+        <input value={f.amount} onChange={e => setF(p => ({ ...p, amount: e.target.value }))} required placeholder="Ej: 500000" className="input" inputMode="numeric" />
+      </div>
+      <div className="flex flex-col gap-1.5">
+        <label className="text-xs font-medium text-foreground-muted">Tipo</label>
+        <select value={f.kind} onChange={e => setF(p => ({ ...p, kind: e.target.value, category_id: '' }))} className="input">
+          <option value="income">Ingreso</option>
+          <option value="expense">Gasto</option>
+        </select>
+      </div>
+
+      <div className="flex flex-col gap-1.5 col-span-2">
+        <label className="text-xs font-medium text-foreground-muted">Cuenta</label>
+        <select value={f.account_id} onChange={e => setF(p => ({ ...p, account_id: e.target.value }))} className="input">
+          {relevCuentas.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+        </select>
+        {showNewAccount === forForm ? (
+          <div className="flex flex-col gap-2 p-3 bg-border-subtle rounded-[var(--radius-md)] mt-1">
+            <p className="text-xs font-medium text-foreground-muted">Nueva cuenta</p>
+            <input value={newAccName} onChange={e => setNewAccName(e.target.value)} placeholder="Ej: Efectivo, Banco Chile" className="input" autoFocus />
+            <div className="flex gap-2">
+              <Button type="button" size="sm" onClick={() => onSaveNewAccount(forForm)} disabled={newAccLoading || !newAccName.trim()}>
+                {newAccLoading ? 'Guardando…' : 'Guardar'}
+              </Button>
+              <Button type="button" variant="ghost" size="sm" onClick={() => setShowNewAccount(null)}>Cancelar</Button>
+            </div>
+          </div>
+        ) : (
+          <button type="button" onClick={() => setShowNewAccount(forForm)} className="text-xs text-brand-500 hover:text-brand-600 text-left font-medium mt-1">
+            + Nueva cuenta
+          </button>
+        )}
+      </div>
+
+      <div className="flex flex-col gap-1.5 col-span-2">
+        <label className="text-xs font-medium text-foreground-muted">Fecha</label>
+        <input type="date" value={f.date} onChange={e => setF(p => ({ ...p, date: e.target.value }))} required className="input" />
+      </div>
+
+      <div className="flex flex-col gap-1.5 col-span-2">
+        <label className="text-xs font-medium text-foreground-muted">Categoría</label>
+        <select value={parentId} onChange={e => setF(p => ({ ...p, category_id: e.target.value }))} className="input">
+          <option value="">Sin categoría</option>
+          {parents.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+        </select>
+      </div>
+
+      {parentId && subs.length > 0 && (
+        <div className="flex flex-col gap-1.5 col-span-2">
+          <label className="text-xs font-medium text-foreground-muted">Subcategoría</label>
+          <select
+            value={selectedCat?.parent_id ? f.category_id : ''}
+            onChange={e => setF(p => ({ ...p, category_id: e.target.value || parentId }))}
+            className="input"
+          >
+            <option value="">Solo categoría principal</option>
+            {subs.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+          </select>
+        </div>
+      )}
+
+      {showNewCat === forForm ? (
+        <div className="col-span-2 flex flex-col gap-2 p-3 bg-border-subtle rounded-[var(--radius-md)]">
+          <p className="text-xs font-medium text-foreground-muted">Nueva categoría</p>
+          <input value={newCatName} onChange={e => setNewCatName(e.target.value)} placeholder="Nombre" className="input" autoFocus />
+          <select value={newCatKind} onChange={e => setNewCatKind(e.target.value)} className="input">
+            <option value="expense">Gasto</option>
+            <option value="income">Ingreso</option>
+          </select>
+          <select value={newCatParent} onChange={e => setNewCatParent(e.target.value)} className="input">
+            <option value="">Sin padre (categoría principal)</option>
+            {parentCategories.filter(c => c.kind === newCatKind).map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+          </select>
+          <div className="flex gap-2">
+            <Button type="button" size="sm" onClick={() => onSaveNewCat(forForm)} disabled={newCatLoading || !newCatName.trim()}>
+              {newCatLoading ? 'Guardando…' : 'Guardar'}
+            </Button>
+            <Button type="button" variant="ghost" size="sm" onClick={() => setShowNewCat(null)}>Cancelar</Button>
+          </div>
+        </div>
+      ) : (
+        <button type="button" onClick={() => { setShowNewCat(forForm); setNewCatKind(f.kind) }} className="col-span-2 text-xs text-brand-500 hover:text-brand-600 text-left font-medium">
+          + Nueva categoría
+        </button>
+      )}
+
+      <div className="flex flex-col gap-1.5 col-span-2">
+        <label className="text-xs font-medium text-foreground-muted">¿Es mensual?</label>
+        <select value={f.is_recurring ? 'si' : 'no'} onChange={e => setF(p => ({ ...p, is_recurring: e.target.value === 'si' }))} className="input">
+          <option value="no">No (único)</option>
+          <option value="si">Sí (mensual)</option>
+        </select>
+      </div>
+    </div>
+  )
+}
 
 export function MovimientosClient({
   initial, cuentas, initialCategories,
@@ -40,43 +186,32 @@ export function MovimientosClient({
   const router = useRouter()
   const [txs, setTxs] = useState(initial)
   const [categories, setCategories] = useState(initialCategories)
+  const [allCuentas, setAllCuentas] = useState(cuentas)
   const [search, setSearch] = useState('')
   const [filterKind, setFilterKind] = useState<'all' | 'income' | 'expense'>('all')
   const [tab, setTab] = useState<'personal' | 'negocio'>('personal')
   const [showing, setShowing] = useState(false)
   const [loading, setLoading] = useState(false)
   const [editId, setEditId] = useState<string | null>(null)
-  const [editForm, setEditForm] = useState<ReturnType<typeof emptyForm> | null>(null)
+  const [editForm, setEditForm] = useState<FormState | null>(null)
   const [editLoading, setEditLoading] = useState(false)
 
-  // New category inline
   const [showNewCat, setShowNewCat] = useState<'add' | 'edit' | null>(null)
   const [newCatName, setNewCatName] = useState('')
   const [newCatKind, setNewCatKind] = useState('expense')
   const [newCatParent, setNewCatParent] = useState('')
   const [newCatLoading, setNewCatLoading] = useState(false)
 
-  // New account inline
   const [showNewAccount, setShowNewAccount] = useState<'add' | 'edit' | null>(null)
   const [newAccName, setNewAccName] = useState('')
   const [newAccLoading, setNewAccLoading] = useState(false)
 
-  const [allCuentas, setAllCuentas] = useState(cuentas)
   const isBusiness = tab === 'negocio'
   const tabCuentas = allCuentas.filter(c => c.is_business === isBusiness)
   const accountMap = useMemo(() => new Map(allCuentas.map(c => [c.id, c.name])), [allCuentas])
   const catMap = useMemo(() => new Map(categories.map(c => [c.id, c])), [categories])
 
-  const [form, setForm] = useState(emptyForm(cuentas[0]?.id ?? ''))
-
-  const parentCategories = useMemo(
-    () => categories.filter(c => !c.parent_id),
-    [categories]
-  )
-  const subCategories = (parentId: string, kind: string) =>
-    categories.filter(c => c.parent_id === parentId && c.kind === kind)
-
-  const relevantParents = (kind: string) => parentCategories.filter(c => c.kind === kind)
+  const [form, setForm] = useState<FormState>(emptyForm(cuentas[0]?.id ?? ''))
 
   const filtered = useMemo(() =>
     txs
@@ -169,7 +304,7 @@ export function MovimientosClient({
     if (data) {
       setCategories(p => [...p, data])
       if (forForm === 'add') setForm(p => ({ ...p, category_id: data.id }))
-      else if (editForm) setEditForm(p => p ? { ...p, category_id: data.id } : p)
+      else setEditForm(p => p ? { ...p, category_id: data.id } : p)
     }
     setNewCatName('')
     setNewCatParent('')
@@ -190,7 +325,7 @@ export function MovimientosClient({
     if (data) {
       setAllCuentas(p => [...p, data])
       if (forForm === 'add') setForm(p => ({ ...p, account_id: data.id }))
-      else if (editForm) setEditForm(p => p ? { ...p, account_id: data.id } : p)
+      else setEditForm(p => p ? { ...p, account_id: data.id } : p)
     }
     setNewAccName('')
     setShowNewAccount(null)
@@ -209,125 +344,13 @@ export function MovimientosClient({
     return cat.name
   }
 
-  function FormFields({ f, setF, forForm }: {
-    f: ReturnType<typeof emptyForm>,
-    setF: (fn: (p: ReturnType<typeof emptyForm>) => ReturnType<typeof emptyForm>) => void,
-    forForm: 'add' | 'edit',
-  }) {
-    const relevCuentas = allCuentas.filter(c => c.is_business === isBusiness)
-    const parents = relevantParents(f.kind)
-    const selectedParentCat = catMap.get(f.category_id ?? '')
-    const parentId = selectedParentCat?.parent_id ? selectedParentCat.parent_id : (selectedParentCat && !selectedParentCat.parent_id ? selectedParentCat.id : '')
-    const subs = parentId ? subCategories(parentId, f.kind) : []
-
-    return (
-      <div className="grid grid-cols-2 gap-3">
-        <div className="flex flex-col gap-1.5 col-span-2">
-          <label className="text-xs font-medium text-foreground-muted">Descripción</label>
-          <input value={f.description} onChange={e => setF(p => ({ ...p, description: e.target.value }))} required placeholder="Ej: Sueldo, Supermercado" className="input" />
-        </div>
-        <div className="flex flex-col gap-1.5">
-          <label className="text-xs font-medium text-foreground-muted">Monto ($)</label>
-          <input value={f.amount} onChange={e => setF(p => ({ ...p, amount: e.target.value }))} required placeholder="Ej: 500000" className="input" inputMode="numeric" />
-        </div>
-        <div className="flex flex-col gap-1.5">
-          <label className="text-xs font-medium text-foreground-muted">Tipo</label>
-          <select value={f.kind} onChange={e => setF(p => ({ ...p, kind: e.target.value, category_id: '' }))} className="input">
-            <option value="income">Ingreso</option>
-            <option value="expense">Gasto</option>
-          </select>
-        </div>
-        <div className="flex flex-col gap-1.5">
-          <label className="text-xs font-medium text-foreground-muted">Cuenta</label>
-          <select value={f.account_id} onChange={e => setF(p => ({ ...p, account_id: e.target.value }))} className="input">
-            {relevCuentas.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-          </select>
-          {showNewAccount === forForm ? (
-            <div className="flex flex-col gap-2 p-3 bg-border-subtle rounded-[var(--radius-md)]">
-              <p className="text-xs font-medium text-foreground-muted">Nueva cuenta</p>
-              <input value={newAccName} onChange={e => setNewAccName(e.target.value)} placeholder="Ej: Efectivo, Banco Chile" className="input" />
-              <div className="flex gap-2">
-                <Button type="button" size="sm" onClick={() => handleNewAccount(forForm)} disabled={newAccLoading || !newAccName.trim()}>
-                  {newAccLoading ? 'Guardando…' : 'Guardar'}
-                </Button>
-                <Button type="button" variant="ghost" size="sm" onClick={() => setShowNewAccount(null)}>Cancelar</Button>
-              </div>
-            </div>
-          ) : (
-            <button type="button" onClick={() => setShowNewAccount(forForm)} className="text-xs text-brand-500 hover:text-brand-600 text-left font-medium mt-1">
-              + Nueva cuenta
-            </button>
-          )}
-        </div>
-        <div className="flex flex-col gap-1.5">
-          <label className="text-xs font-medium text-foreground-muted">Fecha</label>
-          <input type="date" value={f.date} onChange={e => setF(p => ({ ...p, date: e.target.value }))} required className="input" />
-        </div>
-
-        <div className="flex flex-col gap-1.5 col-span-2">
-          <label className="text-xs font-medium text-foreground-muted">Categoría</label>
-          <select
-            value={parentId}
-            onChange={e => setF(p => ({ ...p, category_id: e.target.value }))}
-            className="input"
-          >
-            <option value="">Sin categoría</option>
-            {parents.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-          </select>
-        </div>
-
-        {parentId && subs.length > 0 && (
-          <div className="flex flex-col gap-1.5 col-span-2">
-            <label className="text-xs font-medium text-foreground-muted">Subcategoría</label>
-            <select
-              value={selectedParentCat?.parent_id ? f.category_id ?? '' : ''}
-              onChange={e => setF(p => ({ ...p, category_id: e.target.value || parentId }))}
-              className="input"
-            >
-              <option value="">Solo categoría principal</option>
-              {subs.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-            </select>
-          </div>
-        )}
-
-        {showNewCat === forForm ? (
-          <div className="col-span-2 flex flex-col gap-2 p-3 bg-border-subtle rounded-[var(--radius-md)]">
-            <p className="text-xs font-medium text-foreground-muted">Nueva categoría</p>
-            <input value={newCatName} onChange={e => setNewCatName(e.target.value)} placeholder="Nombre" className="input" />
-            <select value={newCatKind} onChange={e => setNewCatKind(e.target.value)} className="input">
-              <option value="expense">Gasto</option>
-              <option value="income">Ingreso</option>
-            </select>
-            <select value={newCatParent} onChange={e => setNewCatParent(e.target.value)} className="input">
-              <option value="">Sin padre (categoría principal)</option>
-              {parentCategories.filter(c => c.kind === newCatKind).map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-            </select>
-            <div className="flex gap-2">
-              <Button type="button" size="sm" onClick={() => handleNewCategory(forForm)} disabled={newCatLoading || !newCatName.trim()}>
-                {newCatLoading ? 'Guardando…' : 'Guardar'}
-              </Button>
-              <Button type="button" variant="ghost" size="sm" onClick={() => setShowNewCat(null)}>Cancelar</Button>
-            </div>
-          </div>
-        ) : (
-          <button
-            type="button"
-            onClick={() => { setShowNewCat(forForm); setNewCatKind(f.kind) }}
-            className="col-span-2 text-xs text-brand-500 hover:text-brand-600 text-left font-medium"
-          >
-            + Nueva categoría
-          </button>
-        )}
-
-        <div className="flex flex-col gap-1.5 col-span-2">
-          <label className="text-xs font-medium text-foreground-muted">¿Es mensual?</label>
-          <select value={f.is_recurring ? 'si' : 'no'} onChange={e => setF(p => ({ ...p, is_recurring: e.target.value === 'si' }))} className="input">
-            <option value="no">No (único)</option>
-            <option value="si">Sí (mensual)</option>
-          </select>
-        </div>
-      </div>
-    )
+  const sharedFieldProps = {
+    cuentas: allCuentas, categories, isBusiness,
+    showNewCat, setShowNewCat, newCatName, setNewCatName,
+    newCatKind, setNewCatKind, newCatParent, setNewCatParent,
+    newCatLoading, onSaveNewCat: handleNewCategory,
+    showNewAccount, setShowNewAccount, newAccName, setNewAccName,
+    newAccLoading, onSaveNewAccount: handleNewAccount,
   }
 
   return (
@@ -348,12 +371,7 @@ export function MovimientosClient({
         <div className="flex items-center gap-3 flex-1 max-w-md">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-foreground-muted" />
-            <input
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-              placeholder="Buscar movimientos..."
-              className="input pl-9 w-full"
-            />
+            <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar movimientos..." className="input pl-9 w-full" />
           </div>
           <select value={filterKind} onChange={e => setFilterKind(e.target.value as typeof filterKind)} className="input w-auto">
             <option value="all">Todos</option>
@@ -380,7 +398,7 @@ export function MovimientosClient({
           <CardContent className="p-5">
             <form onSubmit={handleAdd} className="flex flex-col gap-4">
               <h3 className="text-sm font-semibold">Nuevo movimiento {isBusiness ? '· Negocio' : '· Personal'}</h3>
-              <FormFields f={form} setF={setForm} forForm="add" />
+              <FormFields f={form} setF={setForm} forForm="add" {...sharedFieldProps} />
               <div className="flex gap-2 justify-end">
                 <Button type="button" variant="ghost" size="sm" onClick={() => setShowing(false)}>Cancelar</Button>
                 <Button type="submit" size="sm" disabled={loading}>{loading ? 'Guardando...' : 'Guardar'}</Button>
@@ -407,11 +425,7 @@ export function MovimientosClient({
                     <li key={tx.id} className="px-4 py-4 bg-border-subtle">
                       <div className="flex flex-col gap-3">
                         <p className="text-xs font-semibold text-foreground-muted">Editando movimiento</p>
-                        <FormFields
-                          f={editForm}
-                          setF={(fn) => setEditForm(p => p ? fn(p as ReturnType<typeof emptyForm>) : p)}
-                          forForm="edit"
-                        />
+                        <FormFields f={editForm} setF={setEditForm as React.Dispatch<React.SetStateAction<FormState>>} forForm="edit" {...sharedFieldProps} />
                         <div className="flex gap-2 justify-end">
                           <Button type="button" variant="ghost" size="sm" onClick={() => { setEditId(null); setEditForm(null) }}>
                             <X className="h-3.5 w-3.5" /> Cancelar
@@ -427,10 +441,7 @@ export function MovimientosClient({
 
                 return (
                   <li key={tx.id} className="flex items-center gap-3 px-4 py-4 hover:bg-border-subtle transition-colors">
-                    <button
-                      onClick={() => startEdit(tx)}
-                      className="flex items-center gap-3 flex-1 min-w-0 text-left"
-                    >
+                    <button onClick={() => startEdit(tx)} className="flex items-center gap-3 flex-1 min-w-0 text-left">
                       <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${isIncome ? 'bg-success-bg text-success' : 'bg-danger-bg text-danger'}`}>
                         {isIncome ? <ArrowDownLeft className="h-4 w-4" /> : <ArrowUpRight className="h-4 w-4" />}
                       </div>
@@ -439,16 +450,10 @@ export function MovimientosClient({
                         <div className="flex items-center gap-1.5 flex-wrap">
                           <span className="text-xs text-foreground-muted">{displayDate(tx.date)}</span>
                           {accountMap.get(tx.account_id) && (
-                            <>
-                              <span className="text-foreground-subtle text-xs">·</span>
-                              <span className="text-xs text-foreground-muted">{accountMap.get(tx.account_id)}</span>
-                            </>
+                            <><span className="text-foreground-subtle text-xs">·</span><span className="text-xs text-foreground-muted">{accountMap.get(tx.account_id)}</span></>
                           )}
                           {categoryLabel(tx.category_id) && (
-                            <>
-                              <span className="text-foreground-subtle text-xs">·</span>
-                              <span className="text-xs text-foreground-muted">{categoryLabel(tx.category_id)}</span>
-                            </>
+                            <><span className="text-foreground-subtle text-xs">·</span><span className="text-xs text-foreground-muted">{categoryLabel(tx.category_id)}</span></>
                           )}
                           {tx.is_recurring && <span className="text-[10px] text-brand-500 font-medium bg-brand-50 px-1.5 py-0.5 rounded-full">Mensual</span>}
                         </div>
@@ -457,11 +462,7 @@ export function MovimientosClient({
                         {isIncome ? '+' : '-'}{formatCurrency(Math.abs(tx.amount), 'CLP')}
                       </span>
                     </button>
-                    <button
-                      onClick={() => handleDelete(tx.id)}
-                      className="p-2 text-foreground-subtle hover:text-danger transition-colors shrink-0"
-                      aria-label="Eliminar"
-                    >
+                    <button onClick={() => handleDelete(tx.id)} className="p-2 text-foreground-subtle hover:text-danger transition-colors shrink-0" aria-label="Eliminar">
                       <Trash2 className="h-4 w-4" />
                     </button>
                   </li>
