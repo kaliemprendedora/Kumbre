@@ -315,7 +315,6 @@ export function MovimientosClient({
       user_id: user!.id, name, is_business: isBusiness,
     }).select().single()
     if (data) setAllCuentas(p => [...p, data])
-    router.refresh()
     return data?.id ?? null
   }
 
