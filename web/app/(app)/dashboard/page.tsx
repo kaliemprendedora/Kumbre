@@ -11,13 +11,103 @@ import { GoalCard } from '@/components/dashboard/GoalCard'
 import { HealthScoreRing } from '@/components/dashboard/HealthScoreRing'
 import { mockCategories, mockTransactions } from '@/data/mock'
 import { getAnalysisForUser } from '@/lib/kumbre'
+import { createClient } from '@/lib/supabase/server'
 import { formatCurrency, formatPercent } from '@/lib/utils'
 
 export const metadata: Metadata = { title: 'Inicio' }
 
+function weekLabel(start: Date, end: Date) {
+  const fmt = (d: Date) => d.toLocaleDateString('es-CL', { day: 'numeric', month: 'short' })
+  return `${fmt(start)} – ${fmt(end)}`
+}
+
 export default async function DashboardPage() {
   const { cashflow, netWorth, debt, goals, capacity, rules, snapshot } = await getAnalysisForUser()
   const isDemo = snapshot.accounts.every(a => a.id.startsWith('acc-'))
+
+  // Category breakdown + weekly projection from real Supabase data
+  type CatRow = { name: string; amount: number; percentage: number }
+  type WeekRow = { label: string; amount: number }
+  let categoryBreakdown: CatRow[] = []
+  let incomeTotal = cashflow.income
+  let weeklyProjection: WeekRow[] = []
+
+  if (isDemo) {
+    // Use engine breakdown for demo
+    categoryBreakdown = cashflow.byCategory.slice(0, 6).map(c => ({
+      name: c.categoryName, amount: c.amount, percentage: c.percentage,
+    }))
+    // Mock weekly projection
+    weeklyProjection = [
+      { label: 'Sem 1', amount: 580_000 },
+      { label: 'Sem 2', amount: 320_000 },
+      { label: 'Sem 3', amount: 900_000 },
+      { label: 'Sem 4', amount: 420_000 },
+    ]
+  } else {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (user) {
+      const [txsRes, catsRes] = await Promise.all([
+        supabase.from('transactions').select('*').eq('user_id', user.id),
+        supabase.from('categories').select('id, name').eq('user_id', user.id),
+      ])
+      const txs = txsRes.data ?? []
+      const catMap = new Map((catsRes.data ?? []).map(c => [c.id, c.name as string]))
+
+      const now = new Date()
+      const monthStart = new Date(now.getFullYear(), now.getMonth(), 1)
+      const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59)
+
+      const monthTxs = txs.filter(t => {
+        const d = new Date(t.date)
+        return d >= monthStart && d <= monthEnd
+      })
+      const monthExpenses = monthTxs.filter(t => t.kind === 'expense')
+      const totalExp = monthExpenses.reduce((s, t) => s + t.amount, 0)
+      incomeTotal = monthTxs.filter(t => t.kind === 'income').reduce((s, t) => s + t.amount, 0)
+
+      const catAmounts = new Map<string, { name: string; amount: number }>()
+      for (const t of monthExpenses) {
+        const key = t.category_id ?? '__none__'
+        const name = t.category_id ? (catMap.get(t.category_id) ?? 'Sin categoría') : 'Sin categoría'
+        const prev = catAmounts.get(key) ?? { name, amount: 0 }
+        catAmounts.set(key, { name, amount: prev.amount + t.amount })
+      }
+      categoryBreakdown = Array.from(catAmounts.values())
+        .map(({ name, amount }) => ({
+          name, amount,
+          percentage: totalExp > 0 ? Math.round(amount / totalExp * 100) : 0,
+        }))
+        .sort((a, b) => b.amount - a.amount)
+        .slice(0, 6)
+
+      // Weekly projection: next 4 weeks of recurring expenses
+      const recurringExp = txs.filter(t => t.is_recurring && t.kind === 'expense')
+      for (let w = 0; w < 4; w++) {
+        const weekStart = new Date(now)
+        weekStart.setDate(now.getDate() + w * 7)
+        weekStart.setHours(0, 0, 0, 0)
+        const weekEnd = new Date(weekStart)
+        weekEnd.setDate(weekStart.getDate() + 6)
+        weekEnd.setHours(23, 59, 59, 999)
+
+        let weekAmount = 0
+        for (const t of recurringExp) {
+          const txDay = new Date(t.date).getDate()
+          // Check in start month
+          const c1 = new Date(weekStart.getFullYear(), weekStart.getMonth(), txDay)
+          if (c1 >= weekStart && c1 <= weekEnd) weekAmount += t.amount
+          // Check in end month if week crosses month boundary
+          if (weekEnd.getMonth() !== weekStart.getMonth()) {
+            const c2 = new Date(weekEnd.getFullYear(), weekEnd.getMonth(), txDay)
+            if (c2 >= weekStart && c2 <= weekEnd) weekAmount += t.amount
+          }
+        }
+        weeklyProjection.push({ label: weekLabel(weekStart, weekEnd), amount: weekAmount })
+      }
+    }
+  }
 
   const recentTx = isDemo
     ? [...mockTransactions].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).slice(0, 5)
@@ -124,6 +214,65 @@ export default async function DashboardPage() {
             </CardHeader>
             <CardContent>
               <CashflowChart data={chartData} />
+            </CardContent>
+          </Card>
+
+          {/* Category breakdown */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Gastos por categoría — este mes</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {categoryBreakdown.length === 0 ? (
+                <p className="text-sm text-foreground-muted text-center py-6">Sin gastos registrados este mes.</p>
+              ) : (
+                <div className="space-y-3">
+                  <div className="flex justify-between text-xs text-foreground-muted mb-1">
+                    <span>Ingresos del mes</span>
+                    <span className="font-semibold text-success">{formatCurrency(incomeTotal, 'CLP')}</span>
+                  </div>
+                  {categoryBreakdown.map(c => (
+                    <div key={c.name} className="flex flex-col gap-1">
+                      <div className="flex justify-between text-xs">
+                        <span className="text-foreground font-medium">{c.name}</span>
+                        <span className="text-foreground-muted">{formatCurrency(c.amount, 'CLP')} <span className="text-foreground-subtle">({c.percentage}%)</span></span>
+                      </div>
+                      <div className="h-1.5 rounded-full bg-border-subtle overflow-hidden">
+                        <div className="h-full rounded-full bg-danger/60" style={{ width: `${c.percentage}%` }} />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Weekly projection */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Gastos proyectados — próximas 4 semanas</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {weeklyProjection.every(w => w.amount === 0) ? (
+                <p className="text-sm text-foreground-muted text-center py-6">No tienes gastos recurrentes configurados.</p>
+              ) : (
+                <div className="space-y-3">
+                  {(() => {
+                    const max = Math.max(...weeklyProjection.map(w => w.amount), 1)
+                    return weeklyProjection.map(w => (
+                      <div key={w.label} className="flex flex-col gap-1">
+                        <div className="flex justify-between text-xs">
+                          <span className="text-foreground font-medium">{w.label}</span>
+                          <span className="text-foreground-muted">{formatCurrency(w.amount, 'CLP')}</span>
+                        </div>
+                        <div className="h-2 rounded-full bg-border-subtle overflow-hidden">
+                          <div className="h-full rounded-full bg-brand-500/70" style={{ width: `${Math.round(w.amount / max * 100)}%` }} />
+                        </div>
+                      </div>
+                    ))
+                  })()}
+                </div>
+              )}
             </CardContent>
           </Card>
 

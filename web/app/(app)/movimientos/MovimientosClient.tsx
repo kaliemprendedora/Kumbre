@@ -35,7 +35,6 @@ function emptyForm(accountId: string): FormState {
   return { description: '', amount: '', kind: 'expense', is_recurring: false, account_id: accountId, date: localToday(), category_id: '' }
 }
 
-// FormFields has its own local state for inline creation forms — no focus loss
 function FormFields({
   f, setF, cuentas, categories, isBusiness,
   onSaveNewCat, onSaveNewAccount,
@@ -454,7 +453,6 @@ export function MovimientosClient({
             <ul className="divide-y divide-border">
               {filtered.map((tx) => {
                 const isIncome = tx.kind === 'income'
-
                 return (
                   <li key={tx.id} className="flex items-center gap-3 px-4 py-4 hover:bg-border-subtle transition-colors">
                     <button onClick={() => startEdit(tx)} className="flex items-center gap-3 flex-1 min-w-0 text-left">
