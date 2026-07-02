@@ -35,7 +35,6 @@ function emptyForm(accountId: string): FormState {
   return { description: '', amount: '', kind: 'expense', is_recurring: false, account_id: accountId, date: localToday(), category_id: '' }
 }
 
-// FormFields has its own local state for inline creation forms — no focus loss
 function FormFields({
   f, setF, cuentas, categories, isBusiness,
   onSaveNewCat, onSaveNewAccount,
@@ -269,6 +268,7 @@ export function MovimientosClient({
   }
 
   function startEdit(tx: Tx) {
+    setShowing(false)
     setEditId(tx.id)
     setEditForm({
       description: tx.description,
@@ -400,6 +400,34 @@ export function MovimientosClient({
         </Card>
       )}
 
+      {editId && editForm && (
+        <Card>
+          <CardContent className="p-5">
+            <div className="flex flex-col gap-4">
+              <h3 className="text-sm font-semibold">Editando movimiento</h3>
+              <FormFields
+                key={editId}
+                f={editForm}
+                setF={(fn) => setEditForm(p => p ? fn(p) : p)}
+                cuentas={allCuentas}
+                categories={categories}
+                isBusiness={isBusiness}
+                onSaveNewCat={handleNewCategory}
+                onSaveNewAccount={handleNewAccount}
+              />
+              <div className="flex gap-2 justify-end">
+                <Button type="button" variant="ghost" size="sm" onClick={() => { setEditId(null); setEditForm(null) }}>
+                  <X className="h-3.5 w-3.5" /> Cancelar
+                </Button>
+                <Button type="button" size="sm" disabled={editLoading} onClick={() => handleSaveEdit(editId)}>
+                  <Check className="h-3.5 w-3.5" /> {editLoading ? 'Guardando...' : 'Guardar'}
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       <Card>
         <CardContent className="p-0">
           {filtered.length === 0 ? (
@@ -410,34 +438,6 @@ export function MovimientosClient({
             <ul className="divide-y divide-border">
               {filtered.map((tx) => {
                 const isIncome = tx.kind === 'income'
-                const isEditing = editId === tx.id
-
-                if (isEditing && editForm) {
-                  return (
-                    <li key={tx.id} className="px-4 py-4 bg-border-subtle">
-                      <div className="flex flex-col gap-3">
-                        <p className="text-xs font-semibold text-foreground-muted">Editando movimiento</p>
-                        <FormFields
-                          f={editForm}
-                          setF={(fn) => setEditForm(p => p ? fn(p) : p)}
-                          cuentas={allCuentas}
-                          categories={categories}
-                          isBusiness={isBusiness}
-                          onSaveNewCat={handleNewCategory}
-                          onSaveNewAccount={handleNewAccount}
-                        />
-                        <div className="flex gap-2 justify-end">
-                          <Button type="button" variant="ghost" size="sm" onClick={() => { setEditId(null); setEditForm(null) }}>
-                            <X className="h-3.5 w-3.5" /> Cancelar
-                          </Button>
-                          <Button type="button" size="sm" disabled={editLoading} onClick={() => handleSaveEdit(tx.id)}>
-                            <Check className="h-3.5 w-3.5" /> {editLoading ? 'Guardando...' : 'Guardar'}
-                          </Button>
-                        </div>
-                      </div>
-                    </li>
-                  )
-                }
 
                 return (
                   <li key={tx.id} className="flex items-center gap-3 px-4 py-4 hover:bg-border-subtle transition-colors">
