@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
-import { Plus, Trash2, Pencil, Check, X, ChevronDown, ChevronUp } from 'lucide-react'
+import { Plus, Trash2, Pencil, Check, X } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/Button'
 import { Card, CardContent } from '@/components/ui/Card'
@@ -179,7 +179,6 @@ export function TransaccionesClient({ initial, cuentas, initialCategories }: {
           <CardContent className="p-5">
             <form onSubmit={handleAdd} className="flex flex-col gap-4">
               <h3 className="text-sm font-semibold">Nuevo movimiento {isBusiness ? '· Negocio' : '· Personal'}</h3>
-
               <div className="grid grid-cols-2 gap-3">
                 <div className="flex flex-col gap-1.5 col-span-2">
                   <label className="text-xs font-medium text-foreground-muted">Descripción</label>
@@ -213,8 +212,6 @@ export function TransaccionesClient({ initial, cuentas, initialCategories }: {
                     <option value="no">No (único)</option>
                   </select>
                 </div>
-
-                {/* Categoría */}
                 <div className="flex flex-col gap-1.5 col-span-2">
                   <label className="text-xs font-medium text-foreground-muted">Categoría</label>
                   <select value={form.category_id} onChange={e => setForm(p => ({ ...p, category_id: e.target.value, subcategory_id: '' }))} className="input">
@@ -225,8 +222,6 @@ export function TransaccionesClient({ initial, cuentas, initialCategories }: {
                     <Plus className="h-3 w-3" /> Nueva categoría
                   </button>
                 </div>
-
-                {/* Subcategoría */}
                 {form.category_id && (
                   <div className="flex flex-col gap-1.5 col-span-2">
                     <label className="text-xs font-medium text-foreground-muted">Subcategoría</label>
@@ -239,8 +234,6 @@ export function TransaccionesClient({ initial, cuentas, initialCategories }: {
                     </button>
                   </div>
                 )}
-
-                {/* Formulario nueva categoría inline */}
                 {newCatForm !== null && (
                   <div className="col-span-2 rounded-[var(--radius-md)] border border-brand-200 bg-brand-50 p-3 flex flex-col gap-2">
                     <p className="text-xs font-semibold text-brand-700">{newCatForm.parentId ? 'Nueva subcategoría' : 'Nueva categoría'}</p>
@@ -253,7 +246,6 @@ export function TransaccionesClient({ initial, cuentas, initialCategories }: {
                   </div>
                 )}
               </div>
-
               <div className="flex gap-2 justify-end">
                 <Button type="button" variant="ghost" size="sm" onClick={() => { setShowing(false); setNewCatForm(null) }}>Cancelar</Button>
                 <Button type="submit" size="sm" disabled={loading}>{loading ? 'Guardando...' : 'Guardar'}</Button>
