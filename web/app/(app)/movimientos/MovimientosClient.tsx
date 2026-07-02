@@ -45,7 +45,7 @@ function FormFields({
   categories: Category[]
   isBusiness: boolean
   onSaveNewCat: (name: string, kind: string, parentId: string) => Promise<string | null>
-  onSaveNewAccount: (name: string) => Promise<string | null>
+  onSaveNewAccount: (name: string, onCreated: (id: string) => void) => Promise<void>
 }) {
   const [showNewCat, setShowNewCat] = useState(false)
   const [newCatName, setNewCatName] = useState('')
@@ -83,12 +83,11 @@ function FormFields({
   async function saveNewAcc() {
     if (!newAccName.trim()) return
     setNewAccLoading(true)
-    const newId = await onSaveNewAccount(newAccName.trim())
-    if (newId) {
+    await onSaveNewAccount(newAccName.trim(), (newId) => {
       setF(p => ({ ...p, account_id: newId }))
       setNewAccName('')
       setShowNewAcc(false)
-    }
+    })
     setNewAccLoading(false)
   }
 
@@ -308,14 +307,16 @@ export function MovimientosClient({
     return data?.id ?? null
   }
 
-  async function handleNewAccount(name: string): Promise<string | null> {
+  async function handleNewAccount(name: string, onCreated: (id: string) => void): Promise<void> {
     const supabase = createClient()
     const { data: { user } } = await supabase.auth.getUser()
     const { data } = await supabase.from('accounts').insert({
       user_id: user!.id, name, is_business: isBusiness,
     }).select().single()
-    if (data) setAllCuentas(p => [...p, data])
-    return data?.id ?? null
+    if (data) {
+      setAllCuentas(p => [...p, data])
+      onCreated(data.id)
+    }
   }
 
   function categoryLabel(catId?: string | null) {
