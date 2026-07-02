@@ -3,9 +3,10 @@ import { personalSnapshot } from './snapshot'
 import { getUserSnapshot } from './supabase/data'
 import type { FinancialSnapshot } from '@/engine/types/inputs'
 
+const now = new Date()
 const CURRENT_PERIOD = {
-  start: '2026-06-01T00:00:00Z',
-  end: '2026-06-30T23:59:59Z',
+  start: new Date(now.getFullYear(), now.getMonth(), 1).toISOString(),
+  end: new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59).toISOString(),
 }
 
 function analyzeSnapshot(snap: FinancialSnapshot) {
