@@ -22,7 +22,6 @@ export async function getAnalysisForUser() {
   return analyzeSnapshot(userSnap ?? personalSnapshot)
 }
 
-// Legacy sync helper using demo data (kept for backward compat)
 export function getAnalysis() {
   return analyzeSnapshot(personalSnapshot)
 }

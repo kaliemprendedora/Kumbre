@@ -13,6 +13,7 @@ import { mockCategories, mockTransactions } from '@/data/mock'
 import { getAnalysisForUser } from '@/lib/kumbre'
 import { createClient } from '@/lib/supabase/server'
 import { formatCurrency, formatPercent } from '@/lib/utils'
+import { CategoryTrendChart } from '@/components/dashboard/CategoryTrendChart'
 
 export const metadata: Metadata = { title: 'Inicio' }
 
@@ -25,24 +26,32 @@ export default async function DashboardPage() {
   const { cashflow, netWorth, debt, goals, capacity, rules, snapshot } = await getAnalysisForUser()
   const isDemo = snapshot.accounts.every(a => a.id.startsWith('acc-'))
 
-  // Category breakdown + weekly projection from real Supabase data
   type CatRow = { name: string; amount: number; percentage: number }
   type WeekRow = { label: string; amount: number }
   let categoryBreakdown: CatRow[] = []
   let incomeTotal = cashflow.income
   let weeklyProjection: WeekRow[] = []
+  let trendData: Record<string, string | number>[] = []
+  let trendCategories: string[] = []
 
   if (isDemo) {
-    // Use engine breakdown for demo
     categoryBreakdown = cashflow.byCategory.slice(0, 6).map(c => ({
       name: c.categoryName, amount: c.amount, percentage: c.percentage,
     }))
-    // Mock weekly projection
     weeklyProjection = [
       { label: 'Sem 1', amount: 580_000 },
       { label: 'Sem 2', amount: 320_000 },
       { label: 'Sem 3', amount: 900_000 },
       { label: 'Sem 4', amount: 420_000 },
+    ]
+    trendCategories = ['Alimentación', 'Transporte', 'Vivienda', 'Salud']
+    trendData = [
+      { month: 'Feb 26', 'Alimentación': 280_000, 'Transporte': 90_000, 'Vivienda': 600_000, 'Salud': 40_000 },
+      { month: 'Mar 26', 'Alimentación': 310_000, 'Transporte': 110_000, 'Vivienda': 600_000, 'Salud': 90_000 },
+      { month: 'Abr 26', 'Alimentación': 260_000, 'Transporte': 95_000, 'Vivienda': 600_000, 'Salud': 20_000 },
+      { month: 'May 26', 'Alimentación': 340_000, 'Transporte': 80_000, 'Vivienda': 600_000, 'Salud': 55_000 },
+      { month: 'Jun 26', 'Alimentación': 290_000, 'Transporte': 120_000, 'Vivienda': 600_000, 'Salud': 30_000 },
+      { month: 'Jul 26', 'Alimentación': 320_000, 'Transporte': 100_000, 'Vivienda': 600_000, 'Salud': 70_000 },
     ]
   } else {
     const supabase = await createClient()
@@ -82,7 +91,6 @@ export default async function DashboardPage() {
         .sort((a, b) => b.amount - a.amount)
         .slice(0, 6)
 
-      // Weekly projection: next 4 weeks of recurring expenses
       const recurringExp = txs.filter(t => t.is_recurring && t.kind === 'expense')
       for (let w = 0; w < 4; w++) {
         const weekStart = new Date(now)
@@ -95,10 +103,8 @@ export default async function DashboardPage() {
         let weekAmount = 0
         for (const t of recurringExp) {
           const txDay = new Date(t.date).getDate()
-          // Check in start month
           const c1 = new Date(weekStart.getFullYear(), weekStart.getMonth(), txDay)
           if (c1 >= weekStart && c1 <= weekEnd) weekAmount += t.amount
-          // Check in end month if week crosses month boundary
           if (weekEnd.getMonth() !== weekStart.getMonth()) {
             const c2 = new Date(weekEnd.getFullYear(), weekEnd.getMonth(), txDay)
             if (c2 >= weekStart && c2 <= weekEnd) weekAmount += t.amount
@@ -106,6 +112,43 @@ export default async function DashboardPage() {
         }
         weeklyProjection.push({ label: weekLabel(weekStart, weekEnd), amount: weekAmount })
       }
+
+      const LOOKBACK = 6
+      const monthRows: Record<string, string | number>[] = []
+      const catTotals = new Map<string, number>()
+
+      for (let m = LOOKBACK - 1; m >= 0; m--) {
+        const mStart = new Date(now.getFullYear(), now.getMonth() - m, 1)
+        const mEnd = new Date(now.getFullYear(), now.getMonth() - m + 1, 0, 23, 59, 59)
+        const label = mStart.toLocaleDateString('es-CL', { month: 'short', year: '2-digit' })
+        const row: Record<string, string | number> = { month: label }
+
+        const mExpenses = txs.filter(t => {
+          const d = new Date(t.date)
+          return t.kind === 'expense' && d >= mStart && d <= mEnd
+        })
+        const perCat = new Map<string, number>()
+        for (const t of mExpenses) {
+          const name = t.category_id ? (catMap.get(t.category_id) ?? 'Sin categoría') : 'Sin categoría'
+          perCat.set(name, (perCat.get(name) ?? 0) + t.amount)
+        }
+        for (const [name, amt] of perCat) {
+          row[name] = amt
+          catTotals.set(name, (catTotals.get(name) ?? 0) + amt)
+        }
+        monthRows.push(row)
+      }
+
+      trendCategories = Array.from(catTotals.entries())
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 5)
+        .map(([name]) => name)
+
+      trendData = monthRows.map(row => {
+        const filled: Record<string, string | number> = { month: String(row.month) }
+        for (const cat of trendCategories) filled[cat] = (row[cat] as number | undefined) ?? 0
+        return filled
+      })
     }
   }
 
@@ -128,7 +171,6 @@ export default async function DashboardPage() {
 
   return (
     <div className="flex flex-col gap-6 animate-slide-up">
-      {/* Onboarding checklist for new users */}
       {isDemo && (
         <div className="rounded-[var(--radius-xl)] border border-brand-200 bg-brand-50 p-5">
           <div className="flex items-center gap-2 mb-3">
@@ -152,7 +194,6 @@ export default async function DashboardPage() {
         </div>
       )}
 
-      {/* Net worth banner */}
       <div className="rounded-[var(--radius-xl)] bg-gradient-to-br from-brand-600 to-brand-800 p-5 sm:p-6 text-white shadow-[var(--shadow-lg)]">
         <div className="flex items-start justify-between gap-4">
           <div>
@@ -161,67 +202,31 @@ export default async function DashboardPage() {
               {formatCurrency(netWorth.netWorth, 'CLP')}
             </p>
             <div className="flex flex-wrap items-center gap-2 text-sm">
-              <span className="text-brand-200">
-                Activos {formatCurrency(netWorth.totalAssets, 'CLP')}
-              </span>
+              <span className="text-brand-200">Activos {formatCurrency(netWorth.totalAssets, 'CLP')}</span>
               <span className="text-brand-300">·</span>
-              <span className="text-brand-200">
-                Pasivos {formatCurrency(netWorth.totalLiabilities, 'CLP')}
-              </span>
+              <span className="text-brand-200">Pasivos {formatCurrency(netWorth.totalLiabilities, 'CLP')}</span>
             </div>
           </div>
           <HealthScoreRing score={capacity.financialHealthScore} />
         </div>
       </div>
 
-      {/* Stat cards */}
       <div className="grid grid-cols-2 xl:grid-cols-4 gap-3">
-        <StatCard
-          label="Ingresos del mes"
-          value={formatCurrency(cashflow.income, 'CLP')}
-          icon={<TrendingUp className="h-4 w-4" />}
-          accent="success"
-        />
-        <StatCard
-          label="Gastos del mes"
-          value={formatCurrency(cashflow.expenses, 'CLP')}
-          icon={<TrendingDown className="h-4 w-4" />}
-          accent="danger"
-        />
-        <StatCard
-          label="Tasa de ahorro"
-          value={formatPercent(savingsPct, 0)}
-          trend={savingsPct >= 20 ? 0 : -1}
-          trendLabel={savingsPct >= 20 ? 'Meta cumplida' : 'Bajo el 20%'}
-          icon={<Wallet className="h-4 w-4" />}
-          accent={savingsPct >= 20 ? 'success' : 'warning'}
-        />
-        <StatCard
-          label="Liquidez disponible"
-          value={formatCurrency(netWorth.liquidAssets, 'CLP')}
-          icon={<ShieldCheck className="h-4 w-4" />}
-          accent="brand"
-        />
+        <StatCard label="Ingresos del mes" value={formatCurrency(cashflow.income, 'CLP')} icon={<TrendingUp className="h-4 w-4" />} accent="success" />
+        <StatCard label="Gastos del mes" value={formatCurrency(cashflow.expenses, 'CLP')} icon={<TrendingDown className="h-4 w-4" />} accent="danger" />
+        <StatCard label="Tasa de ahorro" value={formatPercent(savingsPct, 0)} trend={savingsPct >= 20 ? 0 : -1} trendLabel={savingsPct >= 20 ? 'Meta cumplida' : 'Bajo el 20%'} icon={<Wallet className="h-4 w-4" />} accent={savingsPct >= 20 ? 'success' : 'warning'} />
+        <StatCard label="Liquidez disponible" value={formatCurrency(netWorth.liquidAssets, 'CLP')} icon={<ShieldCheck className="h-4 w-4" />} accent="brand" />
       </div>
 
-      {/* Main content grid */}
       <div className="grid grid-cols-1 gap-6 xl:grid-cols-3">
-        {/* Left/center col */}
         <div className="xl:col-span-2 space-y-6">
           <Card>
-            <CardHeader>
-              <CardTitle>Flujo de caja — últimos 6 meses</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <CashflowChart data={chartData} />
-            </CardContent>
+            <CardHeader><CardTitle>Flujo de caja — últimos 6 meses</CardTitle></CardHeader>
+            <CardContent><CashflowChart data={chartData} /></CardContent>
           </Card>
 
-          {/* Category breakdown */}
           <Card>
-            <CardHeader>
-              <CardTitle>Gastos por categoría — este mes</CardTitle>
-            </CardHeader>
+            <CardHeader><CardTitle>Gastos por categoría — este mes</CardTitle></CardHeader>
             <CardContent>
               {categoryBreakdown.length === 0 ? (
                 <p className="text-sm text-foreground-muted text-center py-6">Sin gastos registrados este mes.</p>
@@ -247,11 +252,8 @@ export default async function DashboardPage() {
             </CardContent>
           </Card>
 
-          {/* Weekly projection */}
           <Card>
-            <CardHeader>
-              <CardTitle>Gastos proyectados — próximas 4 semanas</CardTitle>
-            </CardHeader>
+            <CardHeader><CardTitle>Gastos proyectados — próximas 4 semanas</CardTitle></CardHeader>
             <CardContent>
               {weeklyProjection.every(w => w.amount === 0) ? (
                 <p className="text-sm text-foreground-muted text-center py-6">No tienes gastos recurrentes configurados.</p>
@@ -276,12 +278,19 @@ export default async function DashboardPage() {
             </CardContent>
           </Card>
 
+          {trendCategories.length > 0 && (
+            <Card>
+              <CardHeader><CardTitle>Evolución de gastos por categoría</CardTitle></CardHeader>
+              <CardContent>
+                <CategoryTrendChart data={trendData} categories={trendCategories} />
+              </CardContent>
+            </Card>
+          )}
+
           <RecentTransactions transactions={recentTx} categories={mockCategories} />
         </div>
 
-        {/* Right column */}
         <div className="space-y-4">
-          {/* Rules alerts */}
           {rules.violations.length > 0 && (
             <Card className="border-warning/40 bg-warning-bg/30">
               <CardContent className="p-4">
@@ -306,9 +315,7 @@ export default async function DashboardPage() {
           <UpcomingEvents events={[]} />
 
           <div>
-            <h2 className="text-xs font-semibold text-foreground-muted uppercase tracking-wide mb-3">
-              Objetivos activos
-            </h2>
+            <h2 className="text-xs font-semibold text-foreground-muted uppercase tracking-wide mb-3">Objetivos activos</h2>
             <div className="space-y-3">
               {goals.objectives.slice(0, 3).map((obj) => (
                 <GoalCard key={obj.id} objective={obj} />
@@ -316,7 +323,6 @@ export default async function DashboardPage() {
             </div>
           </div>
 
-          {/* Debt summary */}
           {debt.totalDebt > 0 && (
             <Card>
               <CardContent className="p-4">
