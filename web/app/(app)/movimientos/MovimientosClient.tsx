@@ -56,9 +56,15 @@ export function MovimientosClient({
   const [newCatParent, setNewCatParent] = useState('')
   const [newCatLoading, setNewCatLoading] = useState(false)
 
+  // New account inline
+  const [showNewAccount, setShowNewAccount] = useState<'add' | 'edit' | null>(null)
+  const [newAccName, setNewAccName] = useState('')
+  const [newAccLoading, setNewAccLoading] = useState(false)
+
+  const [allCuentas, setAllCuentas] = useState(cuentas)
   const isBusiness = tab === 'negocio'
-  const tabCuentas = cuentas.filter(c => c.is_business === isBusiness)
-  const accountMap = useMemo(() => new Map(cuentas.map(c => [c.id, c.name])), [cuentas])
+  const tabCuentas = allCuentas.filter(c => c.is_business === isBusiness)
+  const accountMap = useMemo(() => new Map(allCuentas.map(c => [c.id, c.name])), [allCuentas])
   const catMap = useMemo(() => new Map(categories.map(c => [c.id, c])), [categories])
 
   const [form, setForm] = useState(emptyForm(cuentas[0]?.id ?? ''))
@@ -171,6 +177,27 @@ export function MovimientosClient({
     setNewCatLoading(false)
   }
 
+  async function handleNewAccount(forForm: 'add' | 'edit') {
+    if (!newAccName.trim()) return
+    setNewAccLoading(true)
+    const supabase = createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    const { data } = await supabase.from('accounts').insert({
+      user_id: user!.id,
+      name: newAccName.trim(),
+      is_business: isBusiness,
+    }).select().single()
+    if (data) {
+      setAllCuentas(p => [...p, data])
+      if (forForm === 'add') setForm(p => ({ ...p, account_id: data.id }))
+      else if (editForm) setEditForm(p => p ? { ...p, account_id: data.id } : p)
+    }
+    setNewAccName('')
+    setShowNewAccount(null)
+    setNewAccLoading(false)
+    router.refresh()
+  }
+
   function categoryLabel(catId?: string | null) {
     if (!catId) return null
     const cat = catMap.get(catId)
@@ -187,7 +214,7 @@ export function MovimientosClient({
     setF: (fn: (p: ReturnType<typeof emptyForm>) => ReturnType<typeof emptyForm>) => void,
     forForm: 'add' | 'edit',
   }) {
-    const relevCuentas = cuentas.filter(c => c.is_business === isBusiness)
+    const relevCuentas = allCuentas.filter(c => c.is_business === isBusiness)
     const parents = relevantParents(f.kind)
     const selectedParentCat = catMap.get(f.category_id ?? '')
     const parentId = selectedParentCat?.parent_id ? selectedParentCat.parent_id : (selectedParentCat && !selectedParentCat.parent_id ? selectedParentCat.id : '')
@@ -215,13 +242,28 @@ export function MovimientosClient({
           <select value={f.account_id} onChange={e => setF(p => ({ ...p, account_id: e.target.value }))} className="input">
             {relevCuentas.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
           </select>
+          {showNewAccount === forForm ? (
+            <div className="flex flex-col gap-2 p-3 bg-border-subtle rounded-[var(--radius-md)]">
+              <p className="text-xs font-medium text-foreground-muted">Nueva cuenta</p>
+              <input value={newAccName} onChange={e => setNewAccName(e.target.value)} placeholder="Ej: Efectivo, Banco Chile" className="input" />
+              <div className="flex gap-2">
+                <Button type="button" size="sm" onClick={() => handleNewAccount(forForm)} disabled={newAccLoading || !newAccName.trim()}>
+                  {newAccLoading ? 'Guardando…' : 'Guardar'}
+                </Button>
+                <Button type="button" variant="ghost" size="sm" onClick={() => setShowNewAccount(null)}>Cancelar</Button>
+              </div>
+            </div>
+          ) : (
+            <button type="button" onClick={() => setShowNewAccount(forForm)} className="text-xs text-brand-500 hover:text-brand-600 text-left font-medium mt-1">
+              + Nueva cuenta
+            </button>
+          )}
         </div>
         <div className="flex flex-col gap-1.5">
           <label className="text-xs font-medium text-foreground-muted">Fecha</label>
           <input type="date" value={f.date} onChange={e => setF(p => ({ ...p, date: e.target.value }))} required className="input" />
         </div>
 
-        {/* Categoría padre */}
         <div className="flex flex-col gap-1.5 col-span-2">
           <label className="text-xs font-medium text-foreground-muted">Categoría</label>
           <select
@@ -234,7 +276,6 @@ export function MovimientosClient({
           </select>
         </div>
 
-        {/* Subcategoría */}
         {parentId && subs.length > 0 && (
           <div className="flex flex-col gap-1.5 col-span-2">
             <label className="text-xs font-medium text-foreground-muted">Subcategoría</label>
@@ -249,7 +290,6 @@ export function MovimientosClient({
           </div>
         )}
 
-        {/* Nueva categoría inline */}
         {showNewCat === forForm ? (
           <div className="col-span-2 flex flex-col gap-2 p-3 bg-border-subtle rounded-[var(--radius-md)]">
             <p className="text-xs font-medium text-foreground-muted">Nueva categoría</p>
@@ -292,7 +332,6 @@ export function MovimientosClient({
 
   return (
     <div className="flex flex-col gap-6 animate-slide-up">
-      {/* Tab selector */}
       <div className="flex gap-1 p-1 bg-border-subtle rounded-[var(--radius-md)] w-fit">
         {(['personal', 'negocio'] as const).map(t => (
           <button
@@ -388,7 +427,6 @@ export function MovimientosClient({
 
                 return (
                   <li key={tx.id} className="flex items-center gap-3 px-4 py-4 hover:bg-border-subtle transition-colors">
-                    {/* Tapping the main area opens edit */}
                     <button
                       onClick={() => startEdit(tx)}
                       className="flex items-center gap-3 flex-1 min-w-0 text-left"
