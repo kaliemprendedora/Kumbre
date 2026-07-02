@@ -35,6 +35,7 @@ function emptyForm(accountId: string): FormState {
   return { description: '', amount: '', kind: 'expense', is_recurring: false, account_id: accountId, date: localToday(), category_id: '' }
 }
 
+// FormFields has its own local state for inline creation forms — no focus loss
 function FormFields({
   f, setF, cuentas, categories, isBusiness,
   onSaveNewCat, onSaveNewAccount,
@@ -45,7 +46,7 @@ function FormFields({
   categories: Category[]
   isBusiness: boolean
   onSaveNewCat: (name: string, kind: string, parentId: string) => Promise<string | null>
-  onSaveNewAccount: (name: string, onCreated: (id: string) => void) => Promise<void>
+  onSaveNewAccount: (name: string, isBusiness: boolean) => Promise<string | null>
 }) {
   const [showNewCat, setShowNewCat] = useState(false)
   const [newCatName, setNewCatName] = useState('')
@@ -56,8 +57,10 @@ function FormFields({
   const [showNewAcc, setShowNewAcc] = useState(false)
   const [newAccName, setNewAccName] = useState('')
   const [newAccLoading, setNewAccLoading] = useState(false)
+  const [extraCuentas, setExtraCuentas] = useState<Cuenta[]>([])
 
-  const relevCuentas = cuentas.filter(c => c.is_business === isBusiness)
+  const allCuentas = [...cuentas, ...extraCuentas]
+  const relevCuentas = allCuentas.filter(c => c.is_business === isBusiness)
   const parentCategories = categories.filter(c => !c.parent_id)
   const parents = parentCategories.filter(c => c.kind === f.kind)
   const catMap = new Map(categories.map(c => [c.id, c]))
@@ -83,11 +86,14 @@ function FormFields({
   async function saveNewAcc() {
     if (!newAccName.trim()) return
     setNewAccLoading(true)
-    await onSaveNewAccount(newAccName.trim(), (newId) => {
+    const trimmed = newAccName.trim()
+    const newId = await onSaveNewAccount(trimmed, isBusiness)
+    if (newId) {
+      setExtraCuentas(p => [...p, { id: newId, name: trimmed, is_business: isBusiness }])
       setF(p => ({ ...p, account_id: newId }))
       setNewAccName('')
       setShowNewAcc(false)
-    })
+    }
     setNewAccLoading(false)
   }
 
@@ -307,16 +313,17 @@ export function MovimientosClient({
     return data?.id ?? null
   }
 
-  async function handleNewAccount(name: string, onCreated: (id: string) => void): Promise<void> {
+  async function handleNewAccount(name: string, business: boolean): Promise<string | null> {
     const supabase = createClient()
     const { data: { user } } = await supabase.auth.getUser()
     const { data } = await supabase.from('accounts').insert({
-      user_id: user!.id, name, is_business: isBusiness,
+      user_id: user!.id, name, is_business: business,
     }).select().single()
     if (data) {
       setAllCuentas(p => [...p, data])
-      onCreated(data.id)
+      return data.id
     }
+    return null
   }
 
   function categoryLabel(catId?: string | null) {
