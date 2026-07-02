@@ -36,34 +36,27 @@ function emptyForm(accountId: string): FormState {
 }
 
 function FormFields({
-  f, setF, forForm, cuentas, categories, isBusiness,
-  showNewCat, setShowNewCat, newCatName, setNewCatName, newCatKind, setNewCatKind,
-  newCatParent, setNewCatParent, newCatLoading, onSaveNewCat,
-  showNewAccount, setShowNewAccount, newAccName, setNewAccName, newAccLoading, onSaveNewAccount,
+  f, setF, cuentas, categories, isBusiness,
+  onSaveNewCat, onSaveNewAccount,
 }: {
   f: FormState
-  setF: React.Dispatch<React.SetStateAction<FormState>>
-  forForm: 'add' | 'edit'
+  setF: (updater: (p: FormState) => FormState) => void
   cuentas: Cuenta[]
   categories: Category[]
   isBusiness: boolean
-  showNewCat: 'add' | 'edit' | null
-  setShowNewCat: (v: 'add' | 'edit' | null) => void
-  newCatName: string
-  setNewCatName: (v: string) => void
-  newCatKind: string
-  setNewCatKind: (v: string) => void
-  newCatParent: string
-  setNewCatParent: (v: string) => void
-  newCatLoading: boolean
-  onSaveNewCat: (forForm: 'add' | 'edit') => void
-  showNewAccount: 'add' | 'edit' | null
-  setShowNewAccount: (v: 'add' | 'edit' | null) => void
-  newAccName: string
-  setNewAccName: (v: string) => void
-  newAccLoading: boolean
-  onSaveNewAccount: (forForm: 'add' | 'edit') => void
+  onSaveNewCat: (name: string, kind: string, parentId: string) => Promise<string | null>
+  onSaveNewAccount: (name: string) => Promise<string | null>
 }) {
+  const [showNewCat, setShowNewCat] = useState(false)
+  const [newCatName, setNewCatName] = useState('')
+  const [newCatKind, setNewCatKind] = useState(f.kind)
+  const [newCatParent, setNewCatParent] = useState('')
+  const [newCatLoading, setNewCatLoading] = useState(false)
+
+  const [showNewAcc, setShowNewAcc] = useState(false)
+  const [newAccName, setNewAccName] = useState('')
+  const [newAccLoading, setNewAccLoading] = useState(false)
+
   const relevCuentas = cuentas.filter(c => c.is_business === isBusiness)
   const parentCategories = categories.filter(c => !c.parent_id)
   const parents = parentCategories.filter(c => c.kind === f.kind)
@@ -73,6 +66,31 @@ function FormFields({
     ? selectedCat.parent_id
     : (selectedCat && !selectedCat.parent_id ? selectedCat.id : '')
   const subs = parentId ? categories.filter(c => c.parent_id === parentId && c.kind === f.kind) : []
+
+  async function saveNewCat() {
+    if (!newCatName.trim()) return
+    setNewCatLoading(true)
+    const newId = await onSaveNewCat(newCatName.trim(), newCatKind, newCatParent)
+    if (newId) {
+      setF(p => ({ ...p, category_id: newId }))
+      setNewCatName('')
+      setNewCatParent('')
+      setShowNewCat(false)
+    }
+    setNewCatLoading(false)
+  }
+
+  async function saveNewAcc() {
+    if (!newAccName.trim()) return
+    setNewAccLoading(true)
+    const newId = await onSaveNewAccount(newAccName.trim())
+    if (newId) {
+      setF(p => ({ ...p, account_id: newId }))
+      setNewAccName('')
+      setShowNewAcc(false)
+    }
+    setNewAccLoading(false)
+  }
 
   return (
     <div className="grid grid-cols-2 gap-3">
@@ -97,19 +115,19 @@ function FormFields({
         <select value={f.account_id} onChange={e => setF(p => ({ ...p, account_id: e.target.value }))} className="input">
           {relevCuentas.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
         </select>
-        {showNewAccount === forForm ? (
+        {showNewAcc ? (
           <div className="flex flex-col gap-2 p-3 bg-border-subtle rounded-[var(--radius-md)] mt-1">
             <p className="text-xs font-medium text-foreground-muted">Nueva cuenta</p>
             <input value={newAccName} onChange={e => setNewAccName(e.target.value)} placeholder="Ej: Efectivo, Banco Chile" className="input" autoFocus />
             <div className="flex gap-2">
-              <Button type="button" size="sm" onClick={() => onSaveNewAccount(forForm)} disabled={newAccLoading || !newAccName.trim()}>
+              <Button type="button" size="sm" onClick={saveNewAcc} disabled={newAccLoading || !newAccName.trim()}>
                 {newAccLoading ? 'Guardando…' : 'Guardar'}
               </Button>
-              <Button type="button" variant="ghost" size="sm" onClick={() => setShowNewAccount(null)}>Cancelar</Button>
+              <Button type="button" variant="ghost" size="sm" onClick={() => setShowNewAcc(false)}>Cancelar</Button>
             </div>
           </div>
         ) : (
-          <button type="button" onClick={() => setShowNewAccount(forForm)} className="text-xs text-brand-500 hover:text-brand-600 text-left font-medium mt-1">
+          <button type="button" onClick={() => setShowNewAcc(true)} className="text-xs text-brand-500 hover:text-brand-600 text-left font-medium mt-1">
             + Nueva cuenta
           </button>
         )}
@@ -142,7 +160,7 @@ function FormFields({
         </div>
       )}
 
-      {showNewCat === forForm ? (
+      {showNewCat ? (
         <div className="col-span-2 flex flex-col gap-2 p-3 bg-border-subtle rounded-[var(--radius-md)]">
           <p className="text-xs font-medium text-foreground-muted">Nueva categoría</p>
           <input value={newCatName} onChange={e => setNewCatName(e.target.value)} placeholder="Nombre" className="input" autoFocus />
@@ -155,14 +173,14 @@ function FormFields({
             {parentCategories.filter(c => c.kind === newCatKind).map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
           </select>
           <div className="flex gap-2">
-            <Button type="button" size="sm" onClick={() => onSaveNewCat(forForm)} disabled={newCatLoading || !newCatName.trim()}>
+            <Button type="button" size="sm" onClick={saveNewCat} disabled={newCatLoading || !newCatName.trim()}>
               {newCatLoading ? 'Guardando…' : 'Guardar'}
             </Button>
-            <Button type="button" variant="ghost" size="sm" onClick={() => setShowNewCat(null)}>Cancelar</Button>
+            <Button type="button" variant="ghost" size="sm" onClick={() => setShowNewCat(false)}>Cancelar</Button>
           </div>
         </div>
       ) : (
-        <button type="button" onClick={() => { setShowNewCat(forForm); setNewCatKind(f.kind) }} className="col-span-2 text-xs text-brand-500 hover:text-brand-600 text-left font-medium">
+        <button type="button" onClick={() => { setShowNewCat(true); setNewCatKind(f.kind) }} className="col-span-2 text-xs text-brand-500 hover:text-brand-600 text-left font-medium">
           + Nueva categoría
         </button>
       )}
@@ -195,16 +213,6 @@ export function MovimientosClient({
   const [editId, setEditId] = useState<string | null>(null)
   const [editForm, setEditForm] = useState<FormState | null>(null)
   const [editLoading, setEditLoading] = useState(false)
-
-  const [showNewCat, setShowNewCat] = useState<'add' | 'edit' | null>(null)
-  const [newCatName, setNewCatName] = useState('')
-  const [newCatKind, setNewCatKind] = useState('expense')
-  const [newCatParent, setNewCatParent] = useState('')
-  const [newCatLoading, setNewCatLoading] = useState(false)
-
-  const [showNewAccount, setShowNewAccount] = useState<'add' | 'edit' | null>(null)
-  const [newAccName, setNewAccName] = useState('')
-  const [newAccLoading, setNewAccLoading] = useState(false)
 
   const isBusiness = tab === 'negocio'
   const tabCuentas = allCuentas.filter(c => c.is_business === isBusiness)
@@ -290,47 +298,25 @@ export function MovimientosClient({
     router.refresh()
   }
 
-  async function handleNewCategory(forForm: 'add' | 'edit') {
-    if (!newCatName.trim()) return
-    setNewCatLoading(true)
+  async function handleNewCategory(name: string, kind: string, parentId: string): Promise<string | null> {
     const supabase = createClient()
     const { data: { user } } = await supabase.auth.getUser()
     const { data } = await supabase.from('categories').insert({
-      user_id: user!.id,
-      name: newCatName.trim(),
-      kind: newCatKind,
-      parent_id: newCatParent || null,
+      user_id: user!.id, name, kind, parent_id: parentId || null,
     }).select().single()
-    if (data) {
-      setCategories(p => [...p, data])
-      if (forForm === 'add') setForm(p => ({ ...p, category_id: data.id }))
-      else setEditForm(p => p ? { ...p, category_id: data.id } : p)
-    }
-    setNewCatName('')
-    setNewCatParent('')
-    setShowNewCat(null)
-    setNewCatLoading(false)
+    if (data) setCategories(p => [...p, data])
+    return data?.id ?? null
   }
 
-  async function handleNewAccount(forForm: 'add' | 'edit') {
-    if (!newAccName.trim()) return
-    setNewAccLoading(true)
+  async function handleNewAccount(name: string): Promise<string | null> {
     const supabase = createClient()
     const { data: { user } } = await supabase.auth.getUser()
     const { data } = await supabase.from('accounts').insert({
-      user_id: user!.id,
-      name: newAccName.trim(),
-      is_business: isBusiness,
+      user_id: user!.id, name, is_business: isBusiness,
     }).select().single()
-    if (data) {
-      setAllCuentas(p => [...p, data])
-      if (forForm === 'add') setForm(p => ({ ...p, account_id: data.id }))
-      else setEditForm(p => p ? { ...p, account_id: data.id } : p)
-    }
-    setNewAccName('')
-    setShowNewAccount(null)
-    setNewAccLoading(false)
+    if (data) setAllCuentas(p => [...p, data])
     router.refresh()
+    return data?.id ?? null
   }
 
   function categoryLabel(catId?: string | null) {
@@ -342,15 +328,6 @@ export function MovimientosClient({
       return parent ? `${parent.name} › ${cat.name}` : cat.name
     }
     return cat.name
-  }
-
-  const sharedFieldProps = {
-    cuentas: allCuentas, categories, isBusiness,
-    showNewCat, setShowNewCat, newCatName, setNewCatName,
-    newCatKind, setNewCatKind, newCatParent, setNewCatParent,
-    newCatLoading, onSaveNewCat: handleNewCategory,
-    showNewAccount, setShowNewAccount, newAccName, setNewAccName,
-    newAccLoading, onSaveNewAccount: handleNewAccount,
   }
 
   return (
@@ -398,7 +375,15 @@ export function MovimientosClient({
           <CardContent className="p-5">
             <form onSubmit={handleAdd} className="flex flex-col gap-4">
               <h3 className="text-sm font-semibold">Nuevo movimiento {isBusiness ? '· Negocio' : '· Personal'}</h3>
-              <FormFields f={form} setF={setForm} forForm="add" {...sharedFieldProps} />
+              <FormFields
+                f={form}
+                setF={(fn) => setForm(fn)}
+                cuentas={allCuentas}
+                categories={categories}
+                isBusiness={isBusiness}
+                onSaveNewCat={handleNewCategory}
+                onSaveNewAccount={handleNewAccount}
+              />
               <div className="flex gap-2 justify-end">
                 <Button type="button" variant="ghost" size="sm" onClick={() => setShowing(false)}>Cancelar</Button>
                 <Button type="submit" size="sm" disabled={loading}>{loading ? 'Guardando...' : 'Guardar'}</Button>
@@ -425,7 +410,15 @@ export function MovimientosClient({
                     <li key={tx.id} className="px-4 py-4 bg-border-subtle">
                       <div className="flex flex-col gap-3">
                         <p className="text-xs font-semibold text-foreground-muted">Editando movimiento</p>
-                        <FormFields f={editForm} setF={setEditForm as React.Dispatch<React.SetStateAction<FormState>>} forForm="edit" {...sharedFieldProps} />
+                        <FormFields
+                          f={editForm}
+                          setF={(fn) => setEditForm(p => p ? fn(p) : p)}
+                          cuentas={allCuentas}
+                          categories={categories}
+                          isBusiness={isBusiness}
+                          onSaveNewCat={handleNewCategory}
+                          onSaveNewAccount={handleNewAccount}
+                        />
                         <div className="flex gap-2 justify-end">
                           <Button type="button" variant="ghost" size="sm" onClick={() => { setEditId(null); setEditForm(null) }}>
                             <X className="h-3.5 w-3.5" /> Cancelar
