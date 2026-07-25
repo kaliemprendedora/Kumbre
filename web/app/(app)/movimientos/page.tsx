@@ -1,24 +1,24 @@
-import type { Metadata } from 'next'
-import { mockTransactions, mockCategories, mockAccounts } from '@/data/mock'
-import { MovimientosClient } from '@/components/movimientos/MovimientosClient'
+﻿import type { Metadata } from 'next'
+import { createClient } from '@/lib/supabase/server'
+import { MovimientosClient } from './MovimientosClient'
 
 export const metadata: Metadata = { title: 'Movimientos' }
 
-export default function MovimientosPage() {
-  const categoryMap = new Map(mockCategories.map((c) => [c.id, c]))
-  const accountMap = new Map(mockAccounts.map((a) => [a.id, a]))
+export default async function MovimientosPage() {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
 
-  const sorted = [...mockTransactions].sort(
-    (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
-  )
+  const [txsRes, cuentasRes, catsRes] = await Promise.all([
+    supabase.from('transactions').select('*').eq('user_id', user!.id).order('date', { ascending: false }),
+    supabase.from('accounts').select('id, name, is_business').eq('user_id', user!.id),
+    supabase.from('categories').select('*').eq('user_id', user!.id).order('name'),
+  ])
 
   return (
     <MovimientosClient
-      transactions={sorted}
-      categories={mockCategories}
-      accounts={mockAccounts}
-      categoryMap={categoryMap}
-      accountMap={accountMap}
+      initial={txsRes.data ?? []}
+      cuentas={cuentasRes.data ?? []}
+      initialCategories={catsRes.data ?? []}
     />
   )
 }

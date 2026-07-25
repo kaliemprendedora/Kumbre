@@ -1,4 +1,4 @@
-import Anthropic from '@anthropic-ai/sdk'
+ï»¿import Anthropic from '@anthropic-ai/sdk'
 import { NextRequest, NextResponse } from 'next/server'
 
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
@@ -40,21 +40,21 @@ export async function POST(req: NextRequest) {
           {
             type: 'text',
             text: `Analiza esta boleta/factura/cartola bancaria y extrae todos los movimientos de dinero.
-Devuelve SOLO un JSON válido con este formato exacto, sin texto adicional:
+Devuelve SOLO un JSON vÃ¡lido con este formato exacto, sin texto adicional:
 {
   "transactions": [
     {
-      "date": "YYYY-MM-DD o vacío si no se ve",
-      "description": "nombre del comercio o descripción",
+      "date": "YYYY-MM-DD o vacÃ­o si no se ve",
+      "description": "nombre del comercio o descripciÃ³n",
       "amount": 12345,
       "type": "expense o income",
-      "rawText": "texto original de la línea"
+      "rawText": "texto original de la lÃ­nea"
     }
   ]
 }
 
 Hoy es ${today}. Si la fecha no es clara, usa hoy.
-Los montos deben ser números positivos sin puntos ni comas.
+Los montos deben ser nÃºmeros positivos sin puntos ni comas.
 Si es una boleta simple, hay un solo transaction.
 Si es una cartola, puede haber muchos.`,
           },

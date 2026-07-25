@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useState, useMemo } from 'react'
 import { ArrowDownLeft, ArrowUpRight, Search, Plus, Trash2, Check, X } from 'lucide-react'
@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/Button'
 import { createClient } from '@/lib/supabase/client'
 import { formatCurrency } from '@/lib/utils'
 import { useRouter } from 'next/navigation'
+import { ScanReceiptButton } from '@/components/movimientos/ScanReceiptButton'
 
 type Tx = {
   id: string; description: string; amount: number; kind: string
@@ -352,8 +353,40 @@ export function MovimientosClient({
     return cat.name
   }
 
+  const categoriesForScan = categories.map(c => ({ id: c.id, name: c.name, color: '#888', type: c.kind }))
+
+  async function handleSaveScanned(scanned: Array<{ date: string; description: string; amount: number; type: 'expense' | 'income'; rawText: string; categoryId?: string }>) {
+    const supabase = createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return
+    const defaultAccount = allCuentas.find(c => !c.is_business)
+    if (!defaultAccount) { alert('Primero agrega una cuenta'); return }
+    const rows = scanned.map(tx => ({
+      user_id: user.id,
+      description: tx.description,
+      amount: tx.amount,
+      kind: tx.type,
+      date: tx.date,
+      account_id: defaultAccount.id,
+      category_id: tx.categoryId ?? null,
+      is_recurring: false,
+      is_business: false,
+    }))
+    const { data, error } = await supabase.from('transactions').insert(rows).select()
+    if (error) throw new Error(error.message)
+    if (data) setTxs(prev => [...data, ...prev])
+  }
+
   return (
     <div className="flex flex-col gap-6 animate-slide-up">
+      <div className="rounded-[var(--radius-xl)] border-2 border-dashed border-brand-300 bg-brand-50 dark:bg-brand-950/20 p-5 flex flex-col sm:flex-row items-start sm:items-center gap-4">
+        <div className="flex-1">
+          <p className="text-sm font-semibold text-foreground mb-0.5">Registra tus gastos al instante</p>
+          <p className="text-xs text-foreground-muted">Saca foto a tu boleta y la app detecta los movimientos automáticamente</p>
+        </div>
+        <ScanReceiptButton categories={categoriesForScan} onSave={handleSaveScanned} />
+      </div>
+
       <div className="flex gap-1 p-1 bg-border-subtle rounded-[var(--radius-md)] w-fit">
         {(['personal', 'negocio'] as const).map(t => (
           <button

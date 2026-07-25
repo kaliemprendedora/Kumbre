@@ -1,4 +1,4 @@
-'use client'
+ï»¿'use client'
 
 import { useRef, useState } from 'react'
 import { Camera, X, Check, Loader2, AlertCircle } from 'lucide-react'
@@ -111,7 +111,7 @@ export function ScanReceiptButton({ categories, merchantRules = [], onSave }: Sc
                 </div>
 
                 <div className="flex items-center gap-2">
-                  <span className="text-xs text-foreground-muted">Categoría:</span>
+                  <span className="text-xs text-foreground-muted">CategorÃ­a:</span>
                   <select
                     value={tx.categoryId ?? ''}
                     onChange={(e) => {
@@ -121,7 +121,7 @@ export function ScanReceiptButton({ categories, merchantRules = [], onSave }: Sc
                     }}
                     className="text-xs border border-border rounded-[var(--radius-md)] bg-surface text-foreground px-2 py-1 flex-1"
                   >
-                    <option value="">Sin categoría</option>
+                    <option value="">Sin categorÃ­a</option>
                     {categories
                       .filter((c) => c.type === tx.type || c.type === 'transfer')
                       .map((c) => (
