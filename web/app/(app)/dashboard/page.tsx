@@ -14,6 +14,7 @@ import { getAnalysisForUser } from '@/lib/kumbre'
 import { createClient } from '@/lib/supabase/server'
 import { formatCurrency, formatPercent } from '@/lib/utils'
 import { CategoryTrendChart } from '@/components/dashboard/CategoryTrendChart'
+import { QuickActions } from '@/components/dashboard/QuickActions'
 
 export const metadata: Metadata = { title: 'Inicio' }
 
@@ -33,6 +34,8 @@ export default async function DashboardPage() {
   let weeklyProjection: WeekRow[] = []
   let trendData: Record<string, string | number>[] = []
   let trendCategories: string[] = []
+  let quickCategories: Array<{ id: string; name: string; kind: string }> = []
+  let quickAccounts: Array<{ id: string; name: string; is_business: boolean }> = []
 
   if (isDemo) {
     categoryBreakdown = cashflow.byCategory.slice(0, 6).map(c => ({
@@ -57,10 +60,13 @@ export default async function DashboardPage() {
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
     if (user) {
-      const [txsRes, catsRes] = await Promise.all([
+      const [txsRes, catsRes, accsRes] = await Promise.all([
         supabase.from('transactions').select('*').eq('user_id', user.id),
-        supabase.from('categories').select('id, name').eq('user_id', user.id),
+        supabase.from('categories').select('id, name, kind').eq('user_id', user.id),
+        supabase.from('accounts').select('id, name, is_business').eq('user_id', user.id),
       ])
+      quickCategories = catsRes.data ?? []
+      quickAccounts = accsRes.data ?? []
       const txs = txsRes.data ?? []
       const catMap = new Map((catsRes.data ?? []).map(c => [c.id, c.name as string]))
 

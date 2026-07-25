@@ -1,4 +1,4 @@
-﻿'use client'
+'use client'
 
 import { useState, useMemo } from 'react'
 import { ArrowDownLeft, ArrowUpRight, Search, Plus, Trash2, Check, X } from 'lucide-react'
@@ -207,9 +207,9 @@ function FormFields({
 }
 
 export function MovimientosClient({
-  initial, cuentas, initialCategories,
+  initial, cuentas, initialCategories, autoOpen = false,
 }: {
-  initial: Tx[]; cuentas: Cuenta[]; initialCategories: Category[]
+  initial: Tx[]; cuentas: Cuenta[]; initialCategories: Category[]; autoOpen?: boolean
 }) {
   const router = useRouter()
   const [txs, setTxs] = useState(initial)
@@ -218,7 +218,7 @@ export function MovimientosClient({
   const [search, setSearch] = useState('')
   const [filterKind, setFilterKind] = useState<'all' | 'income' | 'expense'>('all')
   const [tab, setTab] = useState<'personal' | 'negocio'>('personal')
-  const [showing, setShowing] = useState(false)
+  const [showing, setShowing] = useState(autoOpen)
   const [loading, setLoading] = useState(false)
   const [editId, setEditId] = useState<string | null>(null)
   const [editForm, setEditForm] = useState<FormState | null>(null)
